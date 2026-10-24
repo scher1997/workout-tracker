@@ -53,7 +53,7 @@ Most things you'll want to adjust can be done right in the sheet without touchin
 | Add or rename exercises | **Exercise Library** tab (add row with exercise name + muscle group) |
 | Change exercises for your program | **Program** tab (edit exercise names, rep ranges, starting weight) |
 | Override a recommended weight | **Next Week** tab → amber cells in the `Rec. Weight` column — reps recalculate automatically |
-| Log a set | **Log** tab → add a row |
+| Log a set | **Session** tab → fill Weight, Reps, Sets in the current week's columns |
 | Enter session feedback | **Feedback** tab → add a row with dropdowns |
 
 Everything in **Next Week** and **Weekly Volume** recalculates automatically as you add rows to Log and Feedback.
@@ -146,16 +146,50 @@ All rules live in `src/progression.py` (pure Python, fully tested) and are mirro
 | **Config** | All tunable parameters and feedback rule lookup tables |
 | **Exercise Library** | Exercise → muscle group lookup; add your own exercises here |
 | **Program** | Exercises for the current mesocycle: name, rep range, starting weight, sets |
-| **Log** | One row per set: date, week, exercise, set #, weight, reps, actual RIR, notes |
+| **Session** | Training log: one row per exercise, grouped by day, with Weight / Reps / Sets columns for each week |
 | **Feedback** | One row per exercise per session: soreness (before) + pump/tendon/connection (after) |
 | **Next Week** | Auto-calculated recommendations: weight, reps, sets, target RIR, flags |
 | **Weekly Volume** | Sets per muscle group per week across the mesocycle |
+| **History** | Long-format archive of finished mesocycles, filled by `src/archive.py` |
+| **Future Plan** | Scratchpad for planning the next mesocycle's exercises, rep ranges, and starting weights |
+
+The sheet also includes **Help**, **Volume Visual**, and **Dashboard** tabs.
 
 ---
 
-## Starting a new mesocycle
+## Archiving a mesocycle and starting a new one
+
+Do these in order. Archive **before** generating the new sheet.
+
+### 1. Plan the next block (during the last week or two)
+
+Fill in the **Future Plan** tab: exercise, day, rep range, starting weight, and starting sets for each exercise in the next mesocycle.
+
+### 2. Archive the finished mesocycle
+
+```
+uv run python src/archive.py --label "Oct 2026 Hypertrophy"
+```
+
+If you omit `--label`, the script prompts for one. It:
+
+1. Reads the **Session** tab and looks up each exercise's muscle group in **Exercise Library**
+2. Converts it to long format: one row per exercise per week, with weight, reps, sets, and volume (weight × reps × sets)
+3. Appends the rows to the **History** tab, tagged with your label and today's date
+
+Notes:
+- It targets the sheet whose ID is in `output/spreadsheet_id.txt`, which `main.py` writes each time it creates a sheet. That is the most recently generated sheet.
+- It only appends and never overwrites existing History rows. **Running it twice for the same mesocycle duplicates the rows**, so run it once per block.
+- Weeks with no data are skipped, so an unfinished block archives only the weeks you filled in.
+- Check the **History** tab afterward to confirm the rows look right.
+
+### 3. Generate the new sheet
 
 1. Update `config/defaults.yaml` if you want different settings (e.g. 8 weeks, new RIR ladder)
-2. Run `uv run python src/main.py` to generate a fresh sheet
-3. Edit the **Program** tab in the new sheet to swap in new exercises
-4. Bookmark the new URL
+2. Run `uv run python src/main.py`
+3. Bookmark the new URL
+4. Copy your exercises from the old **Future Plan** tab into the new sheet's **Program** tab
+
+### What carries over
+
+Generating a new sheet starts blank, and `output/spreadsheet_id.txt` now points to it. Your archived **History** stays in the *old* sheet, so keep that sheet in Google Drive and don't delete it. The next time you run `archive.py`, the new block's rows go into the new sheet's History tab, so your full history is spread across one sheet per mesocycle.
