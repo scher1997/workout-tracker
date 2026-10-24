@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+
+# Environments
+.venv/
+*.env
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Data & outputs (reproducible — don't commit)
+data/processed/
+reports/
+results/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Google API secrets — never commit
+credentials.json
+token.json

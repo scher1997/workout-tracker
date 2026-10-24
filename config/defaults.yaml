@@ -1,0 +1,54 @@
+mesocycle:
+  length_weeks: 6          # 6–8; change here to affect the whole sheet
+  deload_week: true         # append a deload week after the last working week
+
+# RIR target per week (index 0 = week 1). Extend for longer mesocycles.
+# Week beyond this list defaults to 0 (all-out).
+rir_ladder: [3, 2, 1, 0, 3, 2]   # 6-week default; adjust for 7- or 8-week blocks
+
+rep_range:
+  default_min: 8
+  default_max: 12
+
+weight:
+  increment_lb: 2.5         # smallest plate step
+  bump_pct: 0.05            # 5% increase when reps hit ceiling
+  rep_ceiling: 13           # reps at or above this trigger a weight bump recommendation
+  rep_hard_ceiling: 15      # reps at or above this make weight bump mandatory
+
+# How to count secondary/tertiary muscles in Weekly Volume.
+# "full"       — each muscle (primary, secondary, tertiary) gets 1 full set counted
+# "fractional" — primary=1.0, secondary=0.5, tertiary=0.25
+volume_counting: full
+
+# Feedback adjustment rules ─ values used in the Next Week formula logic.
+# Each entry maps a rating to a modifier applied to the base recommendation.
+pump_rep_add:
+  great: 1       # add 1 rep to next-week target
+  mid: 1
+  none: 2        # add 2 reps to push stimulus
+
+tendon_pain:
+  bad:
+    hold_weight: true
+    set_delta: -1   # drop one set
+    rep_push: false # no rep increase
+  neutral:
+    hold_weight: false
+    set_delta: 0
+    rep_push: true
+  good:
+    hold_weight: false
+    set_delta: 0
+    rep_push: true
+
+muscle_connection:
+  great: { flag: false }
+  good:  { flag: false }
+  not_at_all: { flag: true }   # technique-check flag; swap flag after 2 consecutive weeks
+
+soreness:
+  none:       { hold_sets: false, rir_adjust: 0 }
+  mild:       { hold_sets: false, rir_adjust: 0 }
+  still_sore: { hold_sets: true,  rir_adjust: 1 }   # +1 RIR = easier target
+  # two consecutive still_sore weeks → suggest trimming a set (handled in Next Week logic)
