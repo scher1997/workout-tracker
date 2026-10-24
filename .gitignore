@@ -24,3 +24,6 @@ Thumbs.db
 # Google API secrets — never commit
 credentials.json
 token.json
+
+# Generated output — sheet ID is environment-specific
+output/

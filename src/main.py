@@ -57,8 +57,15 @@ def main() -> None:
     print("Building spreadsheet…")
     url = build_spreadsheet(service, cfg)
 
+    # Save the spreadsheet ID so archive.py can find it without requiring manual input.
+    spreadsheet_id = url.split("/d/")[1].split("/")[0]
+    output_dir = ROOT / "output"
+    output_dir.mkdir(exist_ok=True)
+    (output_dir / "spreadsheet_id.txt").write_text(spreadsheet_id)
+
     print(f"\n✓ Done! Open your sheet here:\n  {url}\n")
     print("Tip: bookmark the URL — re-running this script creates a NEW sheet each time.")
+    print("     To archive a finished mesocycle: uv run python src/archive.py")
 
 
 if __name__ == "__main__":
