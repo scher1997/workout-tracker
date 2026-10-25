@@ -132,7 +132,8 @@ def _dropdown(sheet_id: int, r1: int, c1: int, r2: int, c2: int,
     }
 
 
-def _rows_data(sheet_id: int, start_row: int, rows: list[list[Any]]) -> dict:
+def _rows_data(sheet_id: int, start_row: int, rows: list[list[Any]],
+               start_col: int = 0) -> dict:
     """Build an updateCells request for a 2-D grid of plain values."""
     def _cell_val(v):
         if v is None:
@@ -148,7 +149,7 @@ def _rows_data(sheet_id: int, start_row: int, rows: list[list[Any]]) -> dict:
 
     return {
         "updateCells": {
-            "start": {"sheetId": sheet_id, "rowIndex": start_row, "columnIndex": 0},
+            "start": {"sheetId": sheet_id, "rowIndex": start_row, "columnIndex": start_col},
             "rows": [{"values": [_cell_val(c) for c in row]} for row in rows],
             "fields": "userEnteredValue",
         }
@@ -303,12 +304,7 @@ def build_config(sid: int, cfg: dict) -> list[dict]:
 # ── NAMED RANGES ────────────────────────────────────────────────────────────
 
 def build_named_ranges(cfg_sid: int) -> list[dict]:
-    """Register symbolic Named Ranges for Config cells referenced in cross-tab formulas.
-
-    Formulas use e.g. CFG_WEIGHT_INC instead of Config!$B$6, so a Config row
-    insertion only requires updating the _CFG_ROW_* constants above — no formula
-    strings need touching.
-    """
+    """Register symbolic Named Ranges for Config cells referenced in cross-tab formulas."""
     def _nr(name: str, r1: int, c1: int, r2: int, c2: int) -> dict:
         return {"addNamedRange": {"namedRange": {
             "name": name,
@@ -327,31 +323,112 @@ def build_named_ranges(cfg_sid: int) -> list[dict]:
 
 # (Exercise, Primary, Secondary, Tertiary)  — Secondary/Tertiary may be empty string
 EXERCISE_LIBRARY: list[tuple[str, str, str, str]] = [
-    ("Barbell Back Squat",    "Quads",      "Glutes",     "Hamstrings"),
-    ("Leg Press",             "Quads",      "Glutes",     ""),
-    ("Bulgarian Split Squat", "Quads",      "Glutes",     "Hamstrings"),
-    ("Romanian Deadlift",     "Hamstrings", "Glutes",     "Back"),
-    ("Leg Curl",              "Hamstrings", "",           ""),
-    ("Hip Thrust",            "Glutes",     "Hamstrings", ""),
-    ("Barbell Bench Press",   "Chest",      "Triceps",    "Shoulders"),
-    ("Incline DB Press",      "Chest",      "Triceps",    "Shoulders"),
-    ("Cable Fly",             "Chest",      "Shoulders",  ""),
-    ("Pull-Up",               "Back",       "Biceps",     "Rear Delts"),
-    ("Barbell Row",           "Back",       "Biceps",     "Rear Delts"),
-    ("Cable Row",             "Back",       "Biceps",     ""),
-    ("Lat Pulldown",          "Back",       "Biceps",     ""),
-    ("Overhead Press",        "Shoulders",  "Triceps",    ""),
-    ("Lateral Raise",         "Shoulders",  "",           ""),
-    ("Face Pull",             "Rear Delts", "Shoulders",  ""),
-    ("Barbell Curl",          "Biceps",     "",           ""),
-    ("Incline DB Curl",       "Biceps",     "",           ""),
-    ("Cable Curl",            "Biceps",     "",           ""),
-    ("Tricep Pushdown",       "Triceps",    "",           ""),
-    ("Overhead Tricep Ext.",  "Triceps",    "",           ""),
-    ("Skull Crusher",         "Triceps",    "",           ""),
-    ("Calf Raise",            "Calves",     "",           ""),
-    ("Ab Wheel",              "Abs",        "",           ""),
-    ("Cable Crunch",          "Abs",        "",           ""),
+    # ── Chest ──────────────────────────────────────────────────────────────
+    ("Barbell Bench Press",        "Chest",      "Triceps",    "Shoulders"),
+    ("Incline DB Press",           "Chest",      "Triceps",    "Shoulders"),
+    ("Incline Barbell Press",      "Chest",      "Triceps",    "Shoulders"),
+    ("Dumbbell Bench Press",       "Chest",      "Triceps",    "Shoulders"),
+    ("Cable Fly",                  "Chest",      "Shoulders",  ""),
+    ("Dumbbell Fly",               "Chest",      "Shoulders",  ""),
+    ("Low-to-High Cable Fly",      "Chest",      "Shoulders",  ""),
+    ("High-to-Low Cable Fly",      "Chest",      "Shoulders",  ""),
+    ("Chest Dip",                  "Chest",      "Triceps",    "Shoulders"),
+    ("Machine Chest Press",        "Chest",      "Triceps",    ""),
+    ("Pec Deck",                   "Chest",      "",           ""),
+    # ── Back ───────────────────────────────────────────────────────────────
+    ("Pull-Up",                    "Back",       "Biceps",     "Rear Delts"),
+    ("Barbell Row",                "Back",       "Biceps",     "Rear Delts"),
+    ("Cable Row",                  "Back",       "Biceps",     ""),
+    ("Lat Pulldown",               "Back",       "Biceps",     ""),
+    ("Chest-Supported Row",        "Back",       "Biceps",     "Rear Delts"),
+    ("Seal Row",                   "Back",       "Biceps",     ""),
+    ("Dumbbell Row",               "Back",       "Biceps",     ""),
+    ("T-Bar Row",                  "Back",       "Biceps",     ""),
+    ("Pendlay Row",                "Back",       "Biceps",     ""),
+    ("Meadows Row",                "Back",       "Biceps",     ""),
+    ("Cable Pullover",             "Back",       "Chest",      ""),
+    ("Straight-Arm Pulldown",      "Back",       "",           ""),
+    ("Machine Row",                "Back",       "Biceps",     ""),
+    ("Machine Pulldown",           "Back",       "Biceps",     ""),
+    ("Conventional Deadlift",      "Back",       "Hamstrings", "Glutes"),
+    ("Rack Pull",                  "Back",       "Glutes",     "Hamstrings"),
+    # ── Shoulders ──────────────────────────────────────────────────────────
+    ("Overhead Press",             "Shoulders",  "Triceps",    ""),
+    ("Dumbbell Overhead Press",    "Shoulders",  "Triceps",    ""),
+    ("Arnold Press",               "Shoulders",  "Triceps",    ""),
+    ("Lateral Raise",              "Shoulders",  "",           ""),
+    ("Cable Lateral Raise",        "Shoulders",  "",           ""),
+    ("Machine Lateral Raise",      "Shoulders",  "",           ""),
+    ("Upright Row",                "Shoulders",  "Biceps",     ""),
+    # ── Rear Delts ─────────────────────────────────────────────────────────
+    ("Face Pull",                  "Rear Delts", "Shoulders",  ""),
+    ("Rear Delt Fly",              "Rear Delts", "Shoulders",  ""),
+    ("Rear Delt Cable Fly",        "Rear Delts", "Shoulders",  ""),
+    ("Machine Rear Delt Fly",      "Rear Delts", "",           ""),
+    ("Band Pull-Apart",            "Rear Delts", "Shoulders",  ""),
+    # ── Biceps ─────────────────────────────────────────────────────────────
+    ("Barbell Curl",               "Biceps",     "",           ""),
+    ("EZ-Bar Curl",                "Biceps",     "",           ""),
+    ("Incline DB Curl",            "Biceps",     "",           ""),
+    ("Cable Curl",                 "Biceps",     "",           ""),
+    ("Hammer Curl",                "Biceps",     "",           ""),
+    ("Preacher Curl",              "Biceps",     "",           ""),
+    ("Spider Curl",                "Biceps",     "",           ""),
+    ("Machine Curl",               "Biceps",     "",           ""),
+    ("Concentration Curl",         "Biceps",     "",           ""),
+    ("Zottman Curl",               "Biceps",     "Forearms",   ""),
+    # ── Triceps ────────────────────────────────────────────────────────────
+    ("Tricep Pushdown",            "Triceps",    "",           ""),
+    ("Overhead Tricep Ext.",       "Triceps",    "",           ""),
+    ("Skull Crusher",              "Triceps",    "",           ""),
+    ("Close-Grip Bench Press",     "Triceps",    "Chest",      "Shoulders"),
+    ("Cable Overhead Tricep Ext.", "Triceps",    "",           ""),
+    ("Machine Tricep Extension",   "Triceps",    "",           ""),
+    ("Tricep Kickback",            "Triceps",    "",           ""),
+    ("JM Press",                   "Triceps",    "Chest",      ""),
+    ("Dip",                        "Triceps",    "Chest",      "Shoulders"),
+    # ── Quads ──────────────────────────────────────────────────────────────
+    ("Barbell Back Squat",         "Quads",      "Glutes",     "Hamstrings"),
+    ("Front Squat",                "Quads",      "Glutes",     "Hamstrings"),
+    ("Hack Squat",                 "Quads",      "Glutes",     ""),
+    ("Leg Press",                  "Quads",      "Glutes",     ""),
+    ("Bulgarian Split Squat",      "Quads",      "Glutes",     "Hamstrings"),
+    ("Goblet Squat",               "Quads",      "Glutes",     ""),
+    ("Smith Machine Squat",        "Quads",      "Glutes",     ""),
+    ("Walking Lunge",              "Quads",      "Glutes",     "Hamstrings"),
+    ("Step-Up",                    "Quads",      "Glutes",     ""),
+    ("Leg Extension",              "Quads",      "",           ""),
+    ("Sissy Squat",                "Quads",      "",           ""),
+    # ── Hamstrings ─────────────────────────────────────────────────────────
+    ("Romanian Deadlift",          "Hamstrings", "Glutes",     "Back"),
+    ("Stiff-Leg Deadlift",         "Hamstrings", "Glutes",     "Back"),
+    ("Good Morning",               "Hamstrings", "Back",       "Glutes"),
+    ("Single-Leg RDL",             "Hamstrings", "Glutes",     ""),
+    ("Leg Curl",                   "Hamstrings", "",           ""),
+    ("Seated Leg Curl",            "Hamstrings", "",           ""),
+    ("Lying Leg Curl",             "Hamstrings", "",           ""),
+    ("Nordic Curl",                "Hamstrings", "",           ""),
+    # ── Glutes ─────────────────────────────────────────────────────────────
+    ("Hip Thrust",                 "Glutes",     "Hamstrings", ""),
+    ("Single-Leg Hip Thrust",      "Glutes",     "Hamstrings", ""),
+    ("Sumo Deadlift",              "Glutes",     "Hamstrings", "Back"),
+    ("Cable Kickback",             "Glutes",     "",           ""),
+    ("Abductor Machine",           "Glutes",     "",           ""),
+    ("45-Degree Hip Extension",    "Glutes",     "Hamstrings", "Back"),
+    # ── Calves ─────────────────────────────────────────────────────────────
+    ("Calf Raise",                 "Calves",     "",           ""),
+    ("Seated Calf Raise",          "Calves",     "",           ""),
+    ("Donkey Calf Raise",          "Calves",     "",           ""),
+    ("Leg Press Calf Raise",       "Calves",     "",           ""),
+    # ── Abs ────────────────────────────────────────────────────────────────
+    ("Ab Wheel",                   "Abs",        "",           ""),
+    ("Cable Crunch",               "Abs",        "",           ""),
+    ("Hanging Leg Raise",          "Abs",        "",           ""),
+    ("Decline Crunch",             "Abs",        "",           ""),
+    ("Reverse Crunch",             "Abs",        "",           ""),
+    ("Russian Twist",              "Abs",        "",           ""),
+    ("Pallof Press",               "Abs",        "",           ""),
+    ("Plank",                      "Abs",        "",           ""),
 ]
 
 
@@ -396,130 +473,114 @@ def build_program(sid: int) -> list[dict]:
     return requests
 
 
-# ── SESSION ──────────────────────────────────────────────────────────────────
-# Wide-format training log. One row per exercise; weeks run across columns.
-# Column layout: Exercise | Day | (Wk1 Wt | Wk1 Reps | Wk1 Sets) × N_weeks
-# First 2 columns and header row are frozen so exercise names stay visible on mobile.
+# ── LOG ──────────────────────────────────────────────────────────────────────
+# Replaces the old Session + Feedback tabs with a single log.
+# One row per exercise per workout. Per-set reps (S1–S4) captured so
+# declining-rep sets are tracked. Pump/Tendon/Connection/Soreness are
+# in the same row — no tab-switching during training.
+#
+# Column layout (0-indexed):
+#   A(0)  Date          B(1)  Wk             C(2)  Day (dropdown)
+#   D(3)  Exercise      E(4)  Wt (lb)
+#   F(5)  S1  G(6) S2  H(7) S3  I(8) S4
+#   J(9)  Avg Reps ▾ (ARRAYFORMULA — do not edit)
+#   K(10) Num Sets ▾  (ARRAYFORMULA — do not edit)
+#   L(11) Pump  M(12) Tendon  N(13) Connection  O(14) Soreness Before
+#   P(15) Notes
 
-# Day groupings that pre-populate the Session tab.
-# Tuple: (exercise_name, starting_weight_lb, starting_reps, starting_sets)
-SESSION_DAYS: list[tuple[str, list]] = [
-    ("Day A", [
-        ("Barbell Back Squat", 135, 10, 4),
-        ("Romanian Deadlift",  115, 10, 3),
-    ]),
-    ("Day B", [
-        ("Incline DB Press",   60, 10, 3),
-        ("Cable Row",          80, 10, 3),
-        ("Overhead Press",     75, 10, 3),
-    ]),
-    ("Day C", [
-        ("Barbell Curl",       55, 10, 3),
-        ("Tricep Pushdown",    50, 10, 3),
-    ]),
+_DAY_LABELS = ["Day A", "Day B", "Day C"]
+
+# Sample data pre-populates two weeks so formulas in Next Week have live examples.
+# Tuple: (date, week, day, exercise, weight, s1, s2, s3, s4,
+#          pump, tendon, connection, soreness_before, notes)
+LOG_SAMPLE_DATA: list[tuple] = [
+    ("2026-10-27", 1, "Day A", "Barbell Back Squat",  135, 12, 10, 10, 9, "mid",   "good",    "great",     "none", ""),
+    ("2026-10-27", 1, "Day A", "Romanian Deadlift",   115, 12, 10,  9, 0, "mid",   "good",    "good",      "none", ""),
+    ("2026-10-28", 1, "Day B", "Incline DB Press",     60, 12, 11, 10, 0, "great", "good",    "great",     "mild", ""),
+    ("2026-10-28", 1, "Day B", "Cable Row",             80, 12, 10,  9, 0, "mid",   "good",    "great",     "none", ""),
+    ("2026-10-28", 1, "Day B", "Overhead Press",        75, 10,  9,  8, 0, "mid",   "neutral", "good",      "none", ""),
+    ("2026-10-30", 1, "Day C", "Barbell Curl",          55, 12, 10,  9, 0, "great", "good",    "great",     "none", ""),
+    ("2026-10-30", 1, "Day C", "Tricep Pushdown",       50, 12, 11, 10, 0, "mid",   "good",    "good",      "none", ""),
+    ("2026-11-03", 2, "Day A", "Barbell Back Squat",   135, 13, 11, 10, 9, "great", "good",    "great",     "none", ""),
+    ("2026-11-03", 2, "Day A", "Romanian Deadlift",    115, 12, 11, 10, 0, "mid",   "good",    "good",      "mild", ""),
 ]
 
-_DAY_COLORS = [
-    {"red": 0.13, "green": 0.55, "blue": 0.35},  # green  — Day A
-    {"red": 0.13, "green": 0.37, "blue": 0.68},  # blue   — Day B
-    {"red": 0.65, "green": 0.28, "blue": 0.16},  # rust   — Day C
-]
 
-
-def build_session(sid: int, cfg: dict) -> list[dict]:
-    weeks = cfg["mesocycle"]["length_weeks"]
-    requests = []
-
-    # ── Header row ──────────────────────────────────────────────────────────
-    wk_headers = []
-    for w in range(1, weeks + 1):
-        wk_headers += [f"Wk{w} Wt (lb)", f"Wk{w} Reps", f"Wk{w} Sets"]
-    headers = ["Exercise", "Day"] + wk_headers
-    n_cols = len(headers)
-
-    requests.append(_rows_data(sid, 0, [headers]))
-    # Alternating dark/light header bands per week block
-    requests.append(_header_fmt(sid, 0, 0, 1, 2))
-    for w in range(weeks):
-        col = 2 + w * 3
-        bg = CLR_HEADER if w % 2 == 0 else CLR_SUBHEADER
-        requests.append(_header_fmt(sid, 0, col, 1, col + 3, bg=bg))
-
-    # ── Day sections ────────────────────────────────────────────────────────
-    row_idx = 1
-    for (day, exercises), day_color in zip(SESSION_DAYS, _DAY_COLORS):
-        # Day section header — full-width colored bar
-        requests.append(_rows_data(sid, row_idx, [[day] + [""] * (n_cols - 1)]))
-        requests.append({
-            "repeatCell": {
-                "range": _range(sid, row_idx, 0, row_idx + 1, n_cols),
-                "cell": {
-                    "userEnteredFormat": {
-                        "backgroundColor": day_color,
-                        "textFormat": {
-                            "foregroundColor": CLR_WHITE,
-                            "bold": True,
-                            "fontSize": 11,
-                            "fontFamily": FONT_DEFAULT,
-                        },
-                        "horizontalAlignment": "LEFT",
-                        "verticalAlignment": "MIDDLE",
-                    }
-                },
-                "fields": "userEnteredFormat(backgroundColor,textFormat,horizontalAlignment,verticalAlignment)",
-            }
-        })
-        # No merge here — merging across all columns conflicts with the 2-column freeze.
-        # The repeatCell background colour already spans the full row visually.
-        row_idx += 1
-
-        for ex_name, start_wt, start_reps, start_sets in exercises:
-            # Week 1 pre-filled with sample data; rest blank
-            row = [ex_name, day, start_wt, start_reps, start_sets]
-            row += [""] * ((weeks - 1) * 3)
-            requests.append(_rows_data(sid, row_idx, [row]))
-            row_idx += 1
-
-    # ── Column widths ────────────────────────────────────────────────────────
-    requests.append(_col_width(sid, 0, 220))
-    requests.append(_col_width(sid, 1, 80))
-    for w in range(weeks):
-        base = 2 + w * 3
-        requests.append(_col_width(sid, base,     90))   # weight
-        requests.append(_col_width(sid, base + 1, 65))   # reps
-        requests.append(_col_width(sid, base + 2, 65))   # sets
-
-    requests.append(_freeze(sid, 1, 2))
-    return requests
-
-
-# ── FEEDBACK ────────────────────────────────────────────────────────────────
-
-def build_feedback(sid: int) -> list[dict]:
-    # Col E=Soreness, F=Pump, G=Tendon, H=Connection — keep these stable; formulas reference them by letter.
-    # Col I=Actual RIR (numeric, added at the end so existing column references don't shift).
-    headers = ["Date", "Week", "Exercise", "Muscle Group",
-               "Soreness (before)", "Pump (after)", "Tendon/Joint (after)", "Connection (after)",
-               "Actual RIR"]
+def build_log(sid: int, cfg: dict) -> list[dict]:
+    """
+    Combined training log (replaces Session + Feedback tabs).
+    Cols J and K (Avg Reps, Num Sets) are ARRAYFORMULA-computed.
+    Sample data rows are written in two passes (A–I then L–P) so that the
+    ARRAYFORMULA cells in J–K are never overwritten by an explicit value.
+    """
+    headers = [
+        "Date", "Wk", "Day", "Exercise", "Wt (lb)",
+        "S1", "S2", "S3", "S4",
+        "Avg Reps ▾", "Num Sets ▾",
+        "Pump", "Tendon", "Connection", "Soreness Before", "Notes",
+    ]
     requests = []
     requests.append(_rows_data(sid, 0, [headers]))
     requests.append(_header_fmt(sid, 0, 0, 1, len(headers)))
 
-    sample = [
-        ["2026-11-03", 1, "Barbell Back Squat", "Quads", "none",  "great", "good",    "great", 3],
-        ["2026-11-03", 1, "Incline DB Press",   "Chest", "mild",  "mid",   "neutral", "good",  2],
-    ]
-    requests.append(_rows_data(sid, 1, sample))
+    # ARRAYFORMULA for Avg Reps (col J=9) and Num Sets (col K=10).
+    # Placed in row index 1 (sheet row 2), starting at column 9.
+    # These are the only values written to cols J and K; all other rows
+    # in those columns are computed by the spill.
+    avg_reps_f = (
+        '=ARRAYFORMULA(IFERROR('
+        'MMULT(IF(F2:I2000>0,F2:I2000,0),{1;1;1;1})'
+        '/MMULT(IF(F2:I2000>0,1,0),{1;1;1;1}),""))'
+    )
+    num_sets_f = (
+        '=ARRAYFORMULA(IF(MMULT((F2:I2000>0)*1,{1;1;1;1})=0,"",'
+        'MMULT((F2:I2000>0)*1,{1;1;1;1})))'
+    )
+    requests.append(_rows_data(sid, 1, [[avg_reps_f, num_sets_f]], start_col=9))
 
-    # Dropdowns (rows 1..500)
-    requests.append(_dropdown(sid, 1, 4, 500, 5, ["none", "mild", "still_sore"]))
-    requests.append(_dropdown(sid, 1, 5, 500, 6, ["great", "mid", "none"]))
-    requests.append(_dropdown(sid, 1, 6, 500, 7, ["good", "neutral", "bad"]))
-    requests.append(_dropdown(sid, 1, 7, 500, 8, ["great", "good", "not_at_all"]))
+    # Sample data — write A–I (cols 0–8) and L–P (cols 11–15) in separate
+    # requests so we never clobber the ARRAYFORMULA spill in cols J and K.
+    for i, row in enumerate(LOG_SAMPLE_DATA):
+        sheet_r = 1 + i
+        (date_, week, day, exercise, weight,
+         s1, s2, s3, s4, pump, tendon, connection, soreness, notes) = row
+        # Left block: Date → S4
+        requests.append(_rows_data(sid, sheet_r, [[
+            date_, week, day, exercise, weight,
+            s1 if s1 else "", s2 if s2 else "",
+            s3 if s3 else "", s4 if s4 else "",
+        ]]))
+        # Right block: Pump → Notes (start_col=11 skips J and K)
+        requests.append(_rows_data(sid, sheet_r,
+            [[pump, tendon, connection, soreness, notes]], start_col=11))
 
-    for col, px in [(0, 110), (1, 60), (2, 220), (3, 150), (4, 150), (5, 120), (6, 170), (7, 160), (8, 100)]:
+    n_data = 2000
+    all_exercises = [ex for ex, *_ in EXERCISE_LIBRARY]
+
+    # Dropdowns
+    requests.append(_dropdown(sid, 1, 2,  n_data, 3,  _DAY_LABELS))
+    requests.append(_dropdown(sid, 1, 3,  n_data, 4,  all_exercises))
+    requests.append(_dropdown(sid, 1, 11, n_data, 12, ["great", "mid", "none"]))
+    requests.append(_dropdown(sid, 1, 12, n_data, 13, ["good", "neutral", "bad"]))
+    requests.append(_dropdown(sid, 1, 13, n_data, 14, ["great", "good", "not_at_all"]))
+    requests.append(_dropdown(sid, 1, 14, n_data, 15, ["none", "mild", "still_sore"]))
+
+    # Light grey background on computed cols J, K — signals "auto, don't edit"
+    computed_bg = {"red": 0.90, "green": 0.90, "blue": 0.90}
+    requests.append(_bg(sid, 0, 9, n_data, 11, computed_bg))
+
+    # Column widths
+    for col, px in [
+        (0, 100), (1,  40), (2,  70), (3, 200), (4, 70),
+        (5,  40), (6,  40), (7,  40), (8,  40),
+        (9,  85), (10, 80),
+        (11, 75), (12, 75), (13, 105), (14, 120), (15, 180),
+    ]:
         requests.append(_col_width(sid, col, px))
-    requests.append(_freeze(sid, 1))
+
+    # Freeze header row + first 4 cols so Exercise stays visible while
+    # scrolling right to fill in set-rep and feedback columns on mobile.
+    requests.append(_freeze(sid, 1, 4))
     return requests
 
 
@@ -527,63 +588,61 @@ def build_feedback(sid: int) -> list[dict]:
 
 def build_next_week(sid: int, cfg: dict) -> list[dict]:
     """
-    Next Week tab.
-    Column layout: A=Exercise | B=Muscle | C=Last Wk Reps | D=Last Wk Weight |
+    Next Week tab — auto-calculated targets for the coming session.
+    Sources last-week data from the Log tab (long format) via AVERAGEIFS.
+    Sources current-week feedback (pump/tendon/soreness) from Log via INDEX/MATCH.
+    Column layout: A=Exercise | B=Muscle | C=Last Wk Avg Reps | D=Last Wk Weight |
                    E=Target RIR | F=Rec. Weight (amber, editable) | G=Rec. Reps |
                    H=Rec. Sets | I=Flags    J=blank | K=label | L=Current Week
-
-    Data source: Session tab (wide format) via OFFSET lookups.
-    Config values accessed via named ranges (see build_named_ranges):
-      CFG_WEIGHT_INC, CFG_REP_CEILING, CFG_RIR_LADDER
     """
     headers = [
         "Exercise", "Muscle Group",
-        "Last Wk Reps", "Last Wk Weight (lb)",
+        "Last Wk Avg Reps", "Last Wk Weight (lb)",
         "Target RIR", "Rec. Weight (lb)", "Rec. Reps", "Rec. Sets",
         "Flags / Notes"
     ]
     requests = []
-    # Header row with "Current Week" control embedded at the end
     requests.append(_rows_data(sid, 0, [headers + ["", "Current Week →", 1]]))
     requests.append(_header_fmt(sid, 0, 0, 1, 9))
 
-    # ── Config cell constants ───────────────────────────────────────────────
-    CW        = "$L$1"              # current week (user editable)
-    CFG_INC   = "CFG_WEIGHT_INC"   # named range → Config weight_increment_lb
-    CFG_RCEIL = "CFG_REP_CEILING"  # named range → Config rep_ceiling (soft)
+    # ── Config cell constants ────────────────────────────────────────────────
+    CW        = "$L$1"
+    CFG_INC   = "CFG_WEIGHT_INC"
+    CFG_RCEIL = "CFG_REP_CEILING"
 
-    # ── Per-exercise formula builder ────────────────────────────────────────
+    # ── Per-exercise formula builder ─────────────────────────────────────────
     def exercise_row(row: int, ex: str, muscle: str) -> list:
         r = row + 1  # 1-based sheet row
 
-        # Session!$C$2 = top-left data cell (Wk1 Weight for first exercise row).
-        # MATCH finds the exercise's position in Session col A (rows 2..200).
-        # OFFSET then jumps to the correct week's block:
-        #   col offset for last-week weight = (CW-2)*3
-        #   col offset for last-week reps   = (CW-2)*3 + 1
-        #   col offset for last-week sets   = (CW-2)*3 + 2
-        # IFERROR silently returns "" when CW=1 (no previous week yet).
-        mx = f"(MATCH(A{r},Session!$A$2:$A$200,0)-1)"
-        last_reps   = f'=IFERROR(OFFSET(Session!$C$2,{mx},({CW}-2)*3+1),"")'
-        last_weight = f'=IFERROR(OFFSET(Session!$C$2,{mx},({CW}-2)*3),"")'
-        last_sets_x =  f'IFERROR(OFFSET(Session!$C$2,{mx},({CW}-2)*3+2),0)'  # inline, no leading =
+        # Log columns: B=Week, D=Exercise, E=Weight, J=Avg Reps, K=Num Sets
+        #              L=Pump, M=Tendon, N=Connection, O=Soreness Before
+        last_weight = f'=IFERROR(AVERAGEIFS(Log!$E:$E,Log!$D:$D,A{r},Log!$B:$B,{CW}-1),"")'
+        last_reps   = f'=IFERROR(AVERAGEIFS(Log!$J:$J,Log!$D:$D,A{r},Log!$B:$B,{CW}-1),"")'
+        last_sets_x = f'IFERROR(AVERAGEIFS(Log!$K:$K,Log!$D:$D,A{r},Log!$B:$B,{CW}-1),0)'
+
+        # Current week feedback — soreness and pump/tendon are now per-exercise in Log
+        soreness_f = (
+            f'IFERROR(INDEX(Log!$O$2:$O$500,'
+            f'MATCH(1,(Log!$D$2:$D$500=A{r})*(Log!$B$2:$B$500={CW}),0)),"")'
+        )
+        pump_f = (
+            f'IFERROR(INDEX(Log!$L$2:$L$500,'
+            f'MATCH(1,(Log!$D$2:$D$500=A{r})*(Log!$B$2:$B$500={CW}),0)),"")'
+        )
+        tendon_f = (
+            f'IFERROR(INDEX(Log!$M$2:$M$500,'
+            f'MATCH(1,(Log!$D$2:$D$500=A{r})*(Log!$B$2:$B$500={CW}),0)),"")'
+        )
+
+        # Rep addition from pump (inline, embedded in formulas below)
+        pump_add  = f'IF({pump_f}="none",2,1)'
+        cand_reps = f'(C{r}+{pump_add})'
 
         # Target RIR from Config ladder; +1 if still sore this week
-        soreness_f = f'IFERROR(INDEX(Feedback!E:E,MATCH(1,(Feedback!D:D=B{r})*(Feedback!B:B={CW}),0)),"")'
         target_rir = (
             f'=IFERROR(VLOOKUP({CW},CFG_RIR_LADDER,2,FALSE),0)'
             f'+IF({soreness_f}="still_sore",1,0)'
         )
-
-        # Feedback lookups for this exercise / current week
-        pump_f   = f'IFERROR(INDEX(Feedback!F:F,MATCH(1,(Feedback!C:C=A{r})*(Feedback!B:B={CW}),0)),"")'
-        tendon_f = f'IFERROR(INDEX(Feedback!G:G,MATCH(1,(Feedback!C:C=A{r})*(Feedback!B:B={CW}),0)),"")'
-
-        # Rep addition from pump (inline expression embedded in formulas below)
-        pump_add = f'IF({pump_f}="none",2,1)'
-
-        # Candidate reps = last reps + pump bonus; drives the weight-bump decision
-        cand_reps = f'(C{r}+{pump_add})'
 
         # Rec. Weight: bump if candidate reps hit the ceiling; else hold
         rec_weight = (
@@ -609,21 +668,14 @@ def build_next_week(sid: int, cfg: dict) -> list[dict]:
             f'=IFERROR(TEXTJOIN(", ",TRUE,'
             f'IF({tendon_f}="bad","⚠ TENDON: maintenance",""),'
             f'IF({pump_f}="none","↑ LOW PUMP",""),'
-            f'IF({soreness_f}="still_sore","😴 STILL SORE","")'
+            f'IF({soreness_f}="still_sore","\U0001f634 STILL SORE","")'
             f'),"")'
         )
         return [ex, muscle, last_reps, last_weight, target_rir,
                 rec_weight, rec_reps, rec_sets, flags]
 
-    # Build one row per exercise, in the same day order as Session tab
-    exercises = [
-        (ex, muscle)
-        for _, exercises in SESSION_DAYS
-        for ex, *_ in exercises
-        for muscle in [next(
-            (p for n, p, *_ in EXERCISE_LIBRARY if n == ex), ""
-        )]
-    ]
+    # Build one row per exercise using SAMPLE_PROGRAM as the source of truth
+    exercises = [(ex, mg) for ex, mg, *_ in SAMPLE_PROGRAM]
     prog_rows = [exercise_row(i + 1, ex, m) for i, (ex, m) in enumerate(exercises)]
     requests.append(_rows_data(sid, 1, prog_rows))
 
@@ -634,7 +686,7 @@ def build_next_week(sid: int, cfg: dict) -> list[dict]:
         ["", "", "", "", "", "← edit amber cells to override weight; reps recalculate", "", "", ""]
     ]))
 
-    for col, px in [(0, 220), (1, 140), (2, 110), (3, 140), (4, 100),
+    for col, px in [(0, 220), (1, 140), (2, 120), (3, 140), (4, 100),
                     (5, 140), (6, 100), (7, 100), (8, 300)]:
         requests.append(_col_width(sid, col, px))
     requests.append(_freeze(sid, 1))
@@ -647,12 +699,10 @@ def build_weekly_volume(sid: int, cfg: dict) -> list[dict]:
     """
     Pivot: rows = muscle groups, columns = weeks.
     Counting mode is read live from Config!B8 ("full" or "fractional").
-      full       — primary/secondary/tertiary each count as 1 set
-      fractional — primary=1.0, secondary=0.5, tertiary=0.25
+    Sources set counts from Log!K (Num Sets, ARRAYFORMULA-computed).
     """
     weeks = cfg["mesocycle"]["length_weeks"]
 
-    # Include every muscle that appears in any column of the library
     muscle_groups = sorted({
         m
         for _, primary, secondary, tertiary in EXERCISE_LIBRARY
@@ -665,31 +715,28 @@ def build_weekly_volume(sid: int, cfg: dict) -> list[dict]:
     requests.append(_rows_data(sid, 0, [headers]))
     requests.append(_header_fmt(sid, 0, 0, 1, len(headers)))
 
-    # Named range for volume_counting (dropdown: full | fractional)
-    CFG_VOL = "CFG_VOLUME_COUNTING"
-
-    # Session tab sets columns: Wk1 Sets=E, Wk2 Sets=H, Wk3 Sets=K, ...
-    # Col index (0-based): 2 + (w-1)*3 + 2 = w*3 + 1  → sheet col letter = chr(69 + (w-1)*3)
-    # (chr(69)='E', chr(72)='H', chr(75)='K', chr(78)='N', chr(81)='Q', chr(84)='T')
+    CFG_VOL  = "CFG_VOLUME_COUNTING"
+    EL       = "'Exercise Library'"
+    D_range  = "Log!$D$2:$D$2000"
+    B_range  = "Log!$B$2:$B$2000"
+    K_range  = "IFERROR(Log!$K$2:$K$2000*1,0)"
 
     rows = []
     for mg in muscle_groups:
         week_cells = []
         for w in range(1, weeks + 1):
-            EL       = "'Exercise Library'"
-            A_range  = "Session!$A$2:$A$200"
-            sets_col = chr(69 + (w - 1) * 3)  # E for wk1, H for wk2, …
-            sets_rng = f"IFERROR(Session!${sets_col}$2:${sets_col}$200*1,0)"
-
-            match_pri = f'(IFERROR(VLOOKUP({A_range},{EL}!$A:$B,2,FALSE),"")="{mg}")'
-            match_sec = f'(IFERROR(VLOOKUP({A_range},{EL}!$A:$C,3,FALSE),"")="{mg}")'
-            match_ter = f'(IFERROR(VLOOKUP({A_range},{EL}!$A:$D,4,FALSE),"")="{mg}")'
+            match_pri  = f'(IFERROR(VLOOKUP({D_range},{EL}!$A:$B,2,FALSE),"")="{mg}")'
+            match_sec  = f'(IFERROR(VLOOKUP({D_range},{EL}!$A:$C,3,FALSE),"")="{mg}")'
+            match_ter  = f'(IFERROR(VLOOKUP({D_range},{EL}!$A:$D,4,FALSE),"")="{mg}")'
+            week_match = f'({B_range}={w})'
 
             full_sp = (
-                f'IFERROR(SUMPRODUCT({sets_rng}*(({match_pri}+{match_sec}+{match_ter})>0)),0)'
+                f'IFERROR(SUMPRODUCT({K_range}*{week_match}*'
+                f'(({match_pri}+{match_sec}+{match_ter})>0)),0)'
             )
             frac_sp = (
-                f'IFERROR(SUMPRODUCT({sets_rng}*({match_pri}*1+{match_sec}*0.5+{match_ter}*0.25)),0)'
+                f'IFERROR(SUMPRODUCT({K_range}*{week_match}*'
+                f'({match_pri}*1+{match_sec}*0.5+{match_ter}*0.25)),0)'
             )
             formula = f'=IF({CFG_VOL}="fractional",{frac_sp},{full_sp})'
             week_cells.append(formula)
@@ -716,69 +763,76 @@ def build_help(sid: int) -> list[dict]:
     """
     requests = []
 
-    # Content: ("label", "explanation") or ("HEADER", title) or ("NOTE", text)
     content = [
         ("HEADER", "Workout Tracker — User Guide"),
 
         ("HEADER", "How to use this sheet each session"),
-        ("1. Before training",   "Open the Feedback tab → add a row for each exercise you plan to do → set the Soreness dropdown for that muscle group."),
-        ("2. During training",   "Use the Next Week tab to see your target weight, reps, and sets. After each exercise, update the Session tab — find your exercise row and fill in the current week's Weight, Reps, and Sets columns."),
-        ("3. After each exercise", "Return to the Feedback tab → fill in the Pump, Tendon/Joint, Connection, and Actual RIR for that exercise."),
-        ("4. End of week",       "Update the Current Week number in the Next Week tab (cell L1) to the next week number. All recommendations recalculate automatically."),
-        ("5. End of mesocycle",  "Re-run the Python script to generate a fresh sheet for the next block. See the README for instructions."),
+        ("1. Before training",     "Open the Log tab → add a row for each exercise in today's workout → fill in Date, Wk, Day, Exercise, target Weight, and Soreness Before."),
+        ("2. Check targets",       "Open the Next Week tab to see your target weight, reps, and sets for each exercise. Return to Log if you want to start with a different weight."),
+        ("3. During training",     "After each exercise, go back to its row in the Log tab → fill in S1, S2, S3, S4 with reps you got per set. Then fill in Pump, Tendon, and Connection in the same row. No tab switching needed."),
+        ("4. End of week",         "Update the Current Week number in the Next Week tab (cell L1) to the next week number. All recommendations recalculate automatically."),
+        ("5. End of mesocycle",    "Re-run the Python script to generate a fresh sheet for the next block. See the README for instructions."),
 
         ("HEADER", "Tab guide"),
-        ("Help (this tab)",      "Reference guide — you are here."),
-        ("Config",               "All rules and numeric settings. Edit values here to tune progression without touching formulas."),
-        ("Exercise Library",     "Maps exercises to muscle groups. Add any exercise you use here before referencing it in Program or Log."),
-        ("Program",              "Your current mesocycle's exercises with rep ranges, starting weight, and sets."),
-        ("Session",              "Your training log. One row per exercise, days grouped with colored headers, weeks across columns. Fill in Weight, Reps, and Sets for the current week's columns."),
-        ("Future Plan",         "Planning scratchpad for your next mesocycle. Fill this in while the current block is running so you're ready to go when you regenerate the sheet."),
-        ("Feedback",             "Record how each exercise felt: soreness before training, pump/tendon/connection after each exercise."),
-        ("Next Week",            "Auto-calculated targets for next session. Amber weight cells are editable — reps recalculate from your override."),
-        ("Weekly Volume",        "Total sets per muscle group per week. Use this to spot under- or over-training across the mesocycle."),
+        ("Help (this tab)",        "Reference guide — you are here."),
+        ("Config",                 "All rules and numeric settings. Edit values here to tune progression without touching formulas."),
+        ("Exercise Library",       "Maps exercises to muscle groups. Add any exercise you use here before referencing it in Program or Log."),
+        ("Program",                "Your current mesocycle's exercises with rep ranges, starting weight, and sets."),
+        ("Log",                    "Combined training log. One row per exercise per workout. Fill in Date, Week, Day, Exercise, weight, and per-set reps (S1–S4). Log pump, tendon, and connection feedback in the same row. The grey Avg Reps and Num Sets columns auto-calculate from S1–S4 — do not type in them."),
+        ("Next Week",              "Auto-calculated targets for next session. Amber weight cells are editable — reps recalculate from your override. Update Current Week (L1) each week."),
+        ("Weekly Volume",          "Total sets per muscle group per week. Use this to spot under- or over-training across the mesocycle."),
+        ("Volume Visual",          "Charts sourced from Weekly Volume: sets per week by muscle (line), and total sets per muscle (bar)."),
+        ("Dashboard",              "Exercise-level progress: select an exercise from the dropdown to see weight and volume trends week over week."),
+        ("History",                "Long-format archive of past mesocycles, populated by running: uv run python src/archive.py"),
+        ("Future Plan",            "Planning scratchpad for your next mesocycle. Fill this in while the current block is running so you’re ready to go when you regenerate the sheet."),
+
+        ("HEADER", "Per-set reps — the key feature"),
+        ("S1, S2, S3, S4",         "Fill in each set’s actual reps as you complete them. It’s normal for reps to decrease each set (e.g. 12, 10, 9, 8). Leave unused set columns blank if you did fewer sets."),
+        ("Avg Reps (grey column)",  "Auto-calculated average of your non-zero set reps for that exercise row. Do not type here."),
+        ("Num Sets (grey column)",  "Auto-calculated count of sets you logged (non-zero S1–S4). Do not type here."),
+        ("How it drives Next Week", "Avg Reps and Num Sets feed directly into the Next Week tab recommendations. If avg reps hit the ceiling, weight bumps. If pump was low, rep target increases. If tendon pain was reported, weight holds and a set is dropped."),
 
         ("HEADER", "Dropdown options"),
-        ("Soreness (before) — none",        "No soreness in the muscle. Train as planned."),
-        ("Soreness (before) — mild",         "Some soreness but not limiting. Train as planned."),
-        ("Soreness (before) — still_sore",   "Muscle hasn't recovered. Target RIR is one step easier and set count is held. Two weeks in a row trims a set."),
-        ("Pump (after) — great",             "Strong muscle pump. +1 rep added to next week's target."),
-        ("Pump (after) — mid",               "Decent pump. +1 rep added to next week's target."),
-        ("Pump (after) — none",              "No pump. +2 reps added to push stimulus harder."),
-        ("Tendon/Joint (after) — good",      "No issues. Normal progression."),
-        ("Tendon/Joint (after) — neutral",   "Nothing notable. Normal progression."),
-        ("Tendon/Joint (after) — bad",       "Pain or discomfort. Triggers a maintenance week: hold weight, drop one set, no rep push."),
-        ("Connection (after) — great",       "Felt the target muscle working clearly. Normal progression."),
-        ("Connection (after) — good",        "Decent mind-muscle connection. Normal progression."),
-        ("Connection (after) — not_at_all",  "Couldn't feel the target muscle. Flags for a technique check. Two weeks in a row flags for an exercise swap."),
+        ("Soreness Before — none",        "No soreness in the muscle. Train as planned."),
+        ("Soreness Before — mild",         "Some soreness but not limiting. Train as planned."),
+        ("Soreness Before — still_sore",   "Muscle hasn’t recovered. Target RIR is one step easier and set count is held. Two weeks in a row trims a set."),
+        ("Pump — great",                   "Strong muscle pump. +1 rep added to next week’s target."),
+        ("Pump — mid",                     "Decent pump. +1 rep added to next week’s target."),
+        ("Pump — none",                    "No pump. +2 reps added to push stimulus harder."),
+        ("Tendon/Joint — good",            "No issues. Normal progression."),
+        ("Tendon/Joint — neutral",         "Nothing notable. Normal progression."),
+        ("Tendon/Joint — bad",             "Pain or discomfort. Triggers a maintenance week: hold weight, drop one set, no rep push."),
+        ("Connection — great",             "Felt the target muscle working clearly. Normal progression."),
+        ("Connection — good",              "Decent mind-muscle connection. Normal progression."),
+        ("Connection — not_at_all",        "Couldn’t feel the target muscle. Flags for a technique check. Two weeks in a row flags for an exercise swap."),
 
         ("HEADER", "Reading the Next Week tab"),
-        ("Current Week (cell L1)", "Update this each week — it drives all the recommendations. Week 1 = first week of the mesocycle."),
-        ("Last Wk Avg Reps",       "Average reps across all logged sets for that exercise last week."),
-        ("Last Wk Weight",         "The highest weight logged for that exercise last week."),
-        ("Target RIR",             "How hard to push this week. Lower = harder (0 = all-out/failure)."),
-        ("Rec. Weight (amber)",    "Recommended weight for next week. This cell is editable — type your override and Rec. Reps will recalculate automatically from that weight."),
-        ("Rec. Reps",              "Target reps. Volume-matched to the recommended weight if the weight changed; pump-based if weight held."),
-        ("Rec. Sets",              "Target sets. May be lower than last week if tendon pain was reported."),
-        ("Flags / Notes",          "Warnings from last week's feedback. Always read these before training."),
+        ("Current Week (cell L1)",  "Update this each week — it drives all the recommendations. Week 1 = first week of the mesocycle."),
+        ("Last Wk Avg Reps",        "Average reps across all logged sets for that exercise last week."),
+        ("Last Wk Weight",          "The weight logged for that exercise last week."),
+        ("Target RIR",              "How hard to push this week. Lower = harder (0 = all-out/failure)."),
+        ("Rec. Weight (amber)",     "Recommended weight for next week. This cell is editable — type your override and Rec. Reps will recalculate automatically from that weight."),
+        ("Rec. Reps",               "Target reps. Volume-matched to the recommended weight if the weight changed; pump-based if weight held."),
+        ("Rec. Sets",               "Target sets. May be lower than last week if tendon pain was reported."),
+        ("Flags / Notes",           "Warnings from last week’s feedback. Always read these before training."),
 
         ("HEADER", "Flags explained"),
-        ("⚠ TENDON: maintenance",           "You reported joint/tendon pain last week. Hold the weight, drop one set, and don't push reps this week."),
-        ("↑ LOW PUMP",                        "Pump was 'none' last week. Rep target is bumped +2 to push the stimulus."),
-        ("😴 STILL SORE",                     "The muscle group wasn't recovered before last session. Target RIR is one step easier this week."),
-        ("CONNECTION: check technique",       "You couldn't feel the target muscle last week. Review your form before adding load."),
-        ("CONNECTION: consider swap",         "Two weeks in a row with poor connection. Consider swapping to a different exercise for this muscle."),
-        ("UNDER_RECOVERED: trim a set",       "The muscle group was still sore two weeks running. Consider dropping one set to allow more recovery."),
+        ("⚠ TENDON: maintenance",          "You reported joint/tendon pain last week. Hold the weight, drop one set, and don’t push reps this week."),
+        ("↑ LOW PUMP",                     "Pump was ‘none’ last week. Rep target is bumped +2 to push the stimulus."),
+        ("\U0001f634 STILL SORE",               "The muscle wasn’t recovered before last session. Target RIR is one step easier this week."),
+        ("CONNECTION: check technique",         "You couldn’t feel the target muscle last week. Review your form before adding load."),
+        ("CONNECTION: consider swap",           "Two weeks in a row with poor connection. Consider swapping to a different exercise for this muscle."),
+        ("UNDER_RECOVERED: trim a set",         "The muscle group was still sore two weeks running. Consider dropping one set to allow more recovery."),
 
-        ("HEADER", "Mobile tips"),
-        ("Use the dropdowns",        "Tap the cell and choose from the list — don't type values manually. The formulas only recognise the exact dropdown text."),
-        ("Frozen headers",           "Every tab has frozen header rows so the column labels stay visible as you scroll down."),
-        ("Where you spend most time","Log and Feedback during a session. Next Week before you start lifting."),
+        ("HEADER", "Mobile tips (iOS Google Sheets)"),
+        ("Log tab first",            "The Log tab is your primary tab during a workout. Add one row per exercise at the start of the session, then fill in set reps and feedback as you go."),
+        ("Frozen columns",           "The Log tab freezes the first 4 columns (Date, Wk, Day, Exercise) so exercise names stay visible as you scroll right to fill in S1–S4 and feedback."),
+        ("Use the dropdowns",        "Tap the cell and choose from the list — don’t type values manually. The formulas only recognise the exact dropdown text."),
         ("Amber = editable",         "Only the amber Rec. Weight cells and the Current Week cell (L1) in Next Week are meant to be overridden. Everything else is formula-driven."),
-        ("Offline",                  "Google Sheets on iOS caches the sheet for offline use after you open it on a connection. Changes sync when you're back online."),
+        ("Grey = auto",              "The grey Avg Reps and Num Sets columns in the Log tab are calculated automatically. Do not type in them."),
+        ("Offline",                  "Google Sheets on iOS caches the sheet for offline use after you open it on a connection. Changes sync when you’re back online."),
     ]
 
-    # Build rows + formatting requests
     row_idx = 0
     col_a_width = 260
     col_b_width = 520
@@ -794,10 +848,8 @@ def build_help(sid: int) -> list[dict]:
             row_idx += 1
         else:
             requests.append(_rows_data(sid, row_idx, [[kind, text]]))
-            # Alternate light background every other content row
             if row_idx % 2 == 0:
                 requests.append(_bg(sid, row_idx, 0, row_idx + 1, 2, CLR_LIGHT))
-            # Bold the label in col A
             requests.append({
                 "repeatCell": {
                     "range": _range(sid, row_idx, 0, row_idx + 1, 1),
@@ -812,7 +864,6 @@ def build_help(sid: int) -> list[dict]:
                     "fields": "userEnteredFormat(textFormat,wrapStrategy,verticalAlignment)",
                 }
             })
-            # Wrap the explanation in col B
             requests.append({
                 "repeatCell": {
                     "range": _range(sid, row_idx, 1, row_idx + 1, 2),
@@ -830,7 +881,6 @@ def build_help(sid: int) -> list[dict]:
 
     requests.append(_col_width(sid, 0, col_a_width))
     requests.append(_col_width(sid, 1, col_b_width))
-    # Auto-height isn't directly settable; set a generous default row height
     requests.append({
         "updateDimensionProperties": {
             "range": {"sheetId": sid, "dimension": "ROWS",
@@ -839,7 +889,6 @@ def build_help(sid: int) -> list[dict]:
             "fields": "pixelSize",
         }
     })
-    # Header rows are single-line — shrink them back
     for i, item in enumerate(content):
         if item[0] == "HEADER":
             requests.append(_row_height(sid, i, 36))
@@ -853,11 +902,8 @@ def build_help(sid: int) -> list[dict]:
 def build_volume_visual(sid: int, cfg: dict) -> list[dict]:
     """
     Two charts sourced from Weekly Volume tab:
-      Chart 1 (line)  — sets per week per muscle group (trend over the mesocycle)
-      Chart 2 (bar)   — total sets per muscle group (full mesocycle summary)
-
-    A transposed data table and a totals table live in this tab so the charts
-    have a clean local source rather than cross-tab range gymnastics.
+      Chart 1 (line)  — sets per week per muscle group
+      Chart 2 (bar)   — total sets per muscle group (full mesocycle)
     """
     weeks = cfg["mesocycle"]["length_weeks"]
     muscle_groups = sorted({
@@ -868,20 +914,13 @@ def build_volume_visual(sid: int, cfg: dict) -> list[dict]:
 
     requests = []
 
-    # ── Title ────────────────────────────────────────────────────────────────
     requests.append(_rows_data(sid, 0, [["Weekly Volume Dashboard"]]))
     requests.append(_header_fmt(sid, 0, 0, 1, n_m + 2, bg=CLR_HEADER, font_size=12))
     requests.append(_merge(sid, 0, 0, 1, n_m + 2))
 
-    # ── Per-week transposed data table ────────────────────────────────────────
-    # Rows: weeks (X-axis for line chart)
-    # Cols: muscle groups (one series each)
-    # Source: formula refs into Weekly Volume tab
-    #   Weekly Volume layout: row 0=headers, rows 1..n_m=data
-    #   Col 0=Muscle Group, cols 1..weeks=week data, col weeks+1=Total
-    PW_START = 2   # row index of per-week section header
-    PW_HDR   = 3   # row index of column headers
-    PW_DATA  = 4   # first data row
+    PW_START = 2
+    PW_HDR   = 3
+    PW_DATA  = 4
 
     requests.append(_rows_data(sid, PW_START, [["PER-WEEK SETS BY MUSCLE GROUP"]]))
     requests.append(_header_fmt(sid, PW_START, 0, PW_START + 1, n_m + 1, bg=CLR_SUBHEADER))
@@ -893,13 +932,12 @@ def build_volume_visual(sid: int, cfg: dict) -> list[dict]:
 
     week_rows = []
     for w in range(1, weeks + 1):
-        wv_col = chr(ord("B") + w - 1)   # B=Wk1, C=Wk2, …
+        wv_col = chr(ord("B") + w - 1)
         row = [f"Wk {w}"] + [f"='Weekly Volume'!{wv_col}{i + 2}" for i in range(n_m)]
         week_rows.append(row)
     requests.append(_rows_data(sid, PW_DATA, week_rows))
 
-    # ── Total-sets summary table ──────────────────────────────────────────────
-    total_col = chr(ord("B") + weeks)     # col letter for the Total column in Weekly Volume
+    total_col = chr(ord("B") + weeks)
     TOT_START = PW_DATA + weeks + 1
     TOT_HDR   = TOT_START + 1
     TOT_DATA  = TOT_START + 2
@@ -917,9 +955,7 @@ def build_volume_visual(sid: int, cfg: dict) -> list[dict]:
     ]
     requests.append(_rows_data(sid, TOT_DATA, tot_rows))
 
-    # ── Chart 1: line chart — sets per week per muscle group ──────────────────
-    # Domain: per-week table, col 0 (week labels), rows PW_HDR..PW_DATA+weeks
-    # Series: one per muscle group
+    # Chart 1: line chart — sets per week per muscle group
     domain_end = PW_DATA + weeks
     c1_domain = _source_range(sid, PW_HDR, 0, domain_end + 1, 1)
     c1_series = [
@@ -944,9 +980,7 @@ def build_volume_visual(sid: int, cfg: dict) -> list[dict]:
         },
     }))
 
-    # ── Chart 2: horizontal bar chart — total sets per muscle group ───────────
-    # Domain: totals table col 0 (muscle names), rows TOT_HDR..TOT_DATA+n_m
-    # Series: col 1 (total sets)
+    # Chart 2: horizontal bar chart — total sets per muscle group
     c2_domain = _source_range(sid, TOT_HDR, 0, TOT_DATA + n_m, 1)
     c2_series = _source_range(sid, TOT_HDR, 1, TOT_DATA + n_m, 2)
     requests.append(_chart(sid, 1, 9, 460, 340, {
@@ -980,13 +1014,12 @@ def build_dashboard(sid: int, cfg: dict) -> list[dict]:
     """
     Exercise-level progress dashboard.
     Cell B2 = exercise selector dropdown.
-    Rows 4-9 = dynamic data table (OFFSET formulas → Session tab).
+    Rows 4-9 = dynamic data table (AVERAGEIFS formulas → Log tab).
     Two line charts (weight trend, volume trend) update when B2 changes.
     """
     weeks = cfg["mesocycle"]["length_weeks"]
     requests = []
 
-    # ── Title + selector ─────────────────────────────────────────────────────
     requests.append(_rows_data(sid, 0, [["Exercise Progress Dashboard"]]))
     requests.append(_header_fmt(sid, 0, 0, 1, 5, bg=CLR_HEADER, font_size=12))
     requests.append(_merge(sid, 0, 0, 1, 5))
@@ -999,37 +1032,30 @@ def build_dashboard(sid: int, cfg: dict) -> list[dict]:
             "fields": "userEnteredFormat.textFormat",
         }
     })
-    # Dropdown populated from Exercise Library
     all_exercises = [ex for ex, *_ in EXERCISE_LIBRARY]
     requests.append(_dropdown(sid, 1, 1, 2, 2, all_exercises))
 
-    # ── Data table ────────────────────────────────────────────────────────────
-    # Row 3: headers    Row 4..4+weeks-1: data (week 1..N)
     DATA_HDR  = 3
     DATA_ROW0 = 4
-    DATA_END  = DATA_ROW0 + weeks   # exclusive row index
+    DATA_END  = DATA_ROW0 + weeks
 
     requests.append(_rows_data(sid, DATA_HDR,
-        [["Week", "Weight (lb)", "Reps", "Sets", "Volume (lb · reps · sets)"]]))
+        [["Week", "Weight (lb)", "Avg Reps", "Sets", "Volume (lb · avg reps · sets)"]]))
     requests.append(_header_fmt(sid, DATA_HDR, 0, DATA_HDR + 1, 5))
 
-    EX = "$B$2"   # selected exercise cell
+    EX = "$B$2"
     data_rows = []
     for w in range(1, weeks + 1):
-        r  = DATA_ROW0 + w            # 1-based sheet row
-        mx = f"(MATCH({EX},Session!$A$2:$A$200,0)-1)"
-        co = (w - 1) * 3             # column offset into Session week block
-        wt   = f"=IFERROR(OFFSET(Session!$C$2,{mx},{co})*1,0)"
-        reps = f"=IFERROR(OFFSET(Session!$C$2,{mx},{co}+1)*1,0)"
-        sets = f"=IFERROR(OFFSET(Session!$C$2,{mx},{co}+2)*1,0)"
+        r    = DATA_ROW0 + w
+        wt   = f"=IFERROR(AVERAGEIFS(Log!$E:$E,Log!$D:$D,{EX},Log!$B:$B,{w})*1,0)"
+        reps = f"=IFERROR(AVERAGEIFS(Log!$J:$J,Log!$D:$D,{EX},Log!$B:$B,{w})*1,0)"
+        sets = f"=IFERROR(AVERAGEIFS(Log!$K:$K,Log!$D:$D,{EX},Log!$B:$B,{w})*1,0)"
         vol  = f"=IFERROR(B{r}*C{r}*D{r},0)"
         data_rows.append([w, wt, reps, sets, vol])
     requests.append(_rows_data(sid, DATA_ROW0, data_rows))
 
-    # ── Charts ────────────────────────────────────────────────────────────────
-    domain = _source_range(sid, DATA_HDR, 0, DATA_END, 1)   # Week col incl. header
+    domain = _source_range(sid, DATA_HDR, 0, DATA_END, 1)
 
-    # Chart 1: weight over weeks
     requests.append(_chart(sid, DATA_END + 1, 0, 440, 300, {
         "title": "Weight Progression",
         "basicChart": {
@@ -1048,9 +1074,8 @@ def build_dashboard(sid: int, cfg: dict) -> list[dict]:
         },
     }))
 
-    # Chart 2: volume over weeks
     requests.append(_chart(sid, DATA_END + 1, 5, 440, 300, {
-        "title": "Volume Progression  (weight × reps × sets)",
+        "title": "Volume Progression  (weight × avg reps × sets)",
         "basicChart": {
             "chartType": "LINE",
             "legendPosition": "NO_LEGEND",
@@ -1067,7 +1092,7 @@ def build_dashboard(sid: int, cfg: dict) -> list[dict]:
         },
     }))
 
-    for col, px in [(0, 65), (1, 120), (2, 80), (3, 80), (4, 220)]:
+    for col, px in [(0, 65), (1, 120), (2, 90), (3, 80), (4, 230)]:
         requests.append(_col_width(sid, col, px))
 
     requests.append(_freeze(sid, 1))
@@ -1084,7 +1109,7 @@ def build_history(sid: int) -> list[dict]:
     requests = []
     headers = [
         "Mesocycle", "Archived Date", "Exercise", "Day", "Primary Muscle",
-        "Week", "Weight (lb)", "Reps", "Sets", "Volume (lb·reps·sets)",
+        "Week", "Weight (lb)", "Avg Reps", "Sets", "Volume (lb·avg reps·sets)",
     ]
     n = len(headers)
 
@@ -1098,7 +1123,7 @@ def build_history(sid: int) -> list[dict]:
 
     for col, px in [
         (0, 160), (1, 120), (2, 220), (3, 80), (4, 140),
-        (5, 60),  (6, 110), (7, 70),  (8, 70), (9, 180),
+        (5, 60),  (6, 110), (7, 80),  (8, 70), (9, 200),
     ]:
         requests.append(_col_width(sid, col, px))
 
@@ -1111,8 +1136,6 @@ def build_history(sid: int) -> list[dict]:
 def build_future_plan(sid: int) -> list[dict]:
     """
     Planning scratchpad for the next mesocycle.
-    Fill this in while working through the current block, then use it as the
-    basis for regenerating the sheet at the start of a new mesocycle.
     """
     requests = []
     title = "Next Mesocycle Plan — fill this in before your current block ends"
@@ -1127,10 +1150,8 @@ def build_future_plan(sid: int) -> list[dict]:
     requests.append(_rows_data(sid, 1, [headers]))
     requests.append(_header_fmt(sid, 1, 0, 2, n))
 
-    # 20 blank rows for the user to fill in
     requests.append(_rows_data(sid, 2, [[""] * n for _ in range(20)]))
 
-    # Light alternating rows
     for row in range(2, 22):
         if row % 2 == 0:
             requests.append(_bg(sid, row, 0, row + 1, n, CLR_LIGHT))
@@ -1138,7 +1159,7 @@ def build_future_plan(sid: int) -> list[dict]:
     for col, px in [(0, 220), (1, 80), (2, 80), (3, 80), (4, 150), (5, 110), (6, 240)]:
         requests.append(_col_width(sid, col, px))
 
-    requests.append(_freeze(sid, 2))  # freeze title + header
+    requests.append(_freeze(sid, 2))
     return requests
 
 
@@ -1151,25 +1172,23 @@ def build_spreadsheet(service, cfg: dict) -> str:
     Create the spreadsheet, build all tabs, apply formatting.
     Returns the spreadsheet URL.
     """
-    # 1. Create blank spreadsheet with all tabs
     tab_titles = [
         "Help", "Config", "Exercise Library", "Program",
-        "Session", "Feedback", "Next Week", "Weekly Volume",
+        "Log", "Next Week", "Weekly Volume",
         "Volume Visual", "Dashboard", "History", "Future Plan",
     ]
     tab_colors = [
-        {"red": 0.4,  "green": 0.76, "blue": 0.64},   # teal    — Help
-        CLR_SUBHEADER,                                  # blue    — Config
+        {"red": 0.4,  "green": 0.76, "blue": 0.64},   # teal   — Help
+        CLR_SUBHEADER,                                  # blue   — Config
         None,                                           # default — Exercise Library
-        CLR_ACCENT,                                     # amber   — Program
-        {"red": 0.13, "green": 0.55, "blue": 0.35},   # green   — Session
-        CLR_ACCENT,                                     # amber   — Feedback
-        {"red": 0.2,  "green": 0.7,  "blue": 0.3},    # green   — Next Week
-        CLR_SUBHEADER,                                  # blue    — Weekly Volume
-        {"red": 0.85, "green": 0.35, "blue": 0.35},   # red     — Volume Visual
-        {"red": 0.2,  "green": 0.55, "blue": 0.85},   # sky     — Dashboard
-        {"red": 0.5,  "green": 0.5,  "blue": 0.5},    # grey    — History
-        {"red": 0.58, "green": 0.39, "blue": 0.72},   # purple  — Future Plan
+        CLR_ACCENT,                                     # amber  — Program
+        {"red": 0.13, "green": 0.55, "blue": 0.35},   # green  — Log
+        {"red": 0.2,  "green": 0.7,  "blue": 0.3},    # green  — Next Week
+        CLR_SUBHEADER,                                  # blue   — Weekly Volume
+        {"red": 0.85, "green": 0.35, "blue": 0.35},   # red    — Volume Visual
+        {"red": 0.2,  "green": 0.55, "blue": 0.85},   # sky    — Dashboard
+        {"red": 0.5,  "green": 0.5,  "blue": 0.5},    # grey   — History
+        {"red": 0.58, "green": 0.39, "blue": 0.72},   # purple — Future Plan
     ]
 
     create_body = {
@@ -1179,7 +1198,7 @@ def build_spreadsheet(service, cfg: dict) -> str:
                 "properties": {
                     "title": title,
                     **({"tabColorStyle": {"rgbColor": color}} if color else {}),
-                    "gridProperties": {"rowCount": 1000, "columnCount": 20},
+                    "gridProperties": {"rowCount": 2100, "columnCount": 20},
                 }
             }
             for title, color in zip(tab_titles, tab_colors)
@@ -1190,19 +1209,16 @@ def build_spreadsheet(service, cfg: dict) -> str:
     spreadsheet_id = result["spreadsheetId"]
     spreadsheet_url = result["spreadsheetUrl"]
 
-    # Map tab name → sheetId
     for sheet in result["sheets"]:
         _SHEET_IDS[sheet["properties"]["title"]] = sheet["properties"]["sheetId"]
 
-    # 2. Collect all formatting/data requests
     all_requests: list[dict] = []
     all_requests += build_named_ranges(    _SHEET_IDS["Config"])
     all_requests += build_help(            _SHEET_IDS["Help"])
     all_requests += build_config(          _SHEET_IDS["Config"],           cfg)
     all_requests += build_exercise_library(_SHEET_IDS["Exercise Library"])
     all_requests += build_program(         _SHEET_IDS["Program"])
-    all_requests += build_session(         _SHEET_IDS["Session"],          cfg)
-    all_requests += build_feedback(        _SHEET_IDS["Feedback"])
+    all_requests += build_log(             _SHEET_IDS["Log"],              cfg)
     all_requests += build_next_week(       _SHEET_IDS["Next Week"],        cfg)
     all_requests += build_weekly_volume(   _SHEET_IDS["Weekly Volume"],    cfg)
     all_requests += build_volume_visual(   _SHEET_IDS["Volume Visual"],    cfg)
@@ -1210,8 +1226,6 @@ def build_spreadsheet(service, cfg: dict) -> str:
     all_requests += build_history(         _SHEET_IDS["History"])
     all_requests += build_future_plan(     _SHEET_IDS["Future Plan"])
 
-    # 3. Fire in one batch (Sheets API allows up to 500 requests per call;
-    #    split if needed)
     batch_size = 400
     for i in range(0, len(all_requests), batch_size):
         service.spreadsheets().batchUpdate(

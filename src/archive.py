@@ -1,14 +1,14 @@
 """
-Archive the current mesocycle's Session data into the History tab.
+Archive the current mesocycle's Log data into the History tab.
 
 Usage:
     uv run python src/archive.py
     uv run python src/archive.py --label "Oct 2026 Hypertrophy"
 
 What it does:
-  1. Reads the Session tab (wide format) from the active spreadsheet.
+  1. Reads the Log tab (long format) from the active spreadsheet.
   2. Reads the Exercise Library tab to look up primary muscles.
-  3. Converts to long format: one row per exercise per week.
+  3. Converts to archive format: one row per exercise per workout per week.
   4. Appends those rows to the History tab (never overwrites existing data).
 """
 import argparse
@@ -63,84 +63,81 @@ def _build_muscle_lookup(library_rows: list[list[str]]) -> dict[str, str]:
     return lookup
 
 
-def _parse_session(
-    session_rows: list[list[str]],
+def _parse_log(
+    log_rows: list[list[str]],
     muscle_lookup: dict[str, str],
     mesocycle_label: str,
     archived_date: str,
 ) -> list[list]:
     """
-    Convert Session tab (wide format) to long-format History rows.
+    Convert Log tab (long format) rows to History archive rows.
 
-    Session columns (0-indexed):
-      0: Exercise
-      1: Day
-      2 + (w-1)*3 + 0: Wk{w} Weight
-      2 + (w-1)*3 + 1: Wk{w} Reps
-      2 + (w-1)*3 + 2: Wk{w} Sets
+    Log columns (0-indexed):
+      0: Date       1: Week      2: Day        3: Exercise   4: Weight (lb)
+      5: S1         6: S2        7: S3         8: S4
+      9: Avg Reps (ARRAYFORMULA-computed — use if populated, else compute)
+     10: Num Sets   (ARRAYFORMULA-computed — use if populated, else compute)
+     11: Pump       12: Tendon   13: Connection 14: Soreness Before  15: Notes
 
-    Session header row: ["Exercise", "Day", "Wk1 Wt (lb)", "Wk1 Reps", "Wk1 Sets", ...]
+    History schema:
+      Mesocycle | Archived Date | Exercise | Day | Primary Muscle |
+      Week | Weight (lb) | Avg Reps | Sets | Volume
     """
-    if not session_rows:
+    if not log_rows:
         return []
 
-    header = session_rows[0]
-    # Count weeks from the header: every group of 3 after col 1
-    num_week_cols = len(header) - 2
-    weeks = num_week_cols // 3
-
     result: list[list] = []
-    current_day = ""
 
-    for row in session_rows[1:]:
-        if not row:
+    for row in log_rows[1:]:  # skip header
+        if len(row) < 4 or not row[3]:
             continue
-
-        exercise = row[0].strip() if row else ""
+        exercise = row[3].strip()
         if not exercise:
             continue
 
-        # Day section headers (e.g. "Day A") have no week data
-        if exercise.lower().startswith("day ") and len([c for c in row[1:] if c]) == 0:
-            current_day = exercise
+        try:
+            week   = int(float(row[1])) if len(row) > 1 and row[1] else 0
+            day    = row[2].strip() if len(row) > 2 else ""
+            weight = float(row[4]) if len(row) > 4 and row[4] else 0.0
+
+            # Use pre-computed avg reps from col 9 if available
+            if len(row) > 9 and row[9]:
+                avg_reps = float(row[9])
+            else:
+                set_vals = [
+                    float(row[c]) for c in range(5, 9)
+                    if c < len(row) and row[c] and float(row[c]) > 0
+                ]
+                avg_reps = sum(set_vals) / len(set_vals) if set_vals else 0.0
+
+            # Use pre-computed num sets from col 10 if available
+            if len(row) > 10 and row[10]:
+                num_sets = int(float(row[10]))
+            else:
+                num_sets = sum(
+                    1 for c in range(5, 9)
+                    if c < len(row) and row[c] and float(row[c]) > 0
+                )
+
+            vol = round(weight * avg_reps * num_sets, 1) if weight and avg_reps else 0
+
+        except (ValueError, TypeError):
             continue
-        # Also catch day headers that have their label but nothing in week columns
-        day_col = row[1].strip() if len(row) > 1 else ""
-        if day_col:
-            current_day = day_col
 
         primary_muscle = muscle_lookup.get(exercise, "")
 
-        for w in range(1, weeks + 1):
-            base = 2 + (w - 1) * 3
-            wt_raw   = row[base]     if base     < len(row) else ""
-            reps_raw = row[base + 1] if base + 1 < len(row) else ""
-            sets_raw = row[base + 2] if base + 2 < len(row) else ""
-
-            # Skip completely empty weeks
-            if not any([wt_raw, reps_raw, sets_raw]):
-                continue
-
-            try:
-                wt   = float(wt_raw)   if wt_raw   else 0.0
-                reps = int(float(reps_raw)) if reps_raw else 0
-                sets = int(float(sets_raw)) if sets_raw else 0
-                vol  = round(wt * reps * sets, 1)
-            except (ValueError, TypeError):
-                wt, reps, sets, vol = wt_raw, reps_raw, sets_raw, ""
-
-            result.append([
-                mesocycle_label,
-                archived_date,
-                exercise,
-                current_day,
-                primary_muscle,
-                w,
-                wt,
-                reps,
-                sets,
-                vol,
-            ])
+        result.append([
+            mesocycle_label,
+            archived_date,
+            exercise,
+            day,
+            primary_muscle,
+            week,
+            weight,
+            round(avg_reps, 1),
+            num_sets,
+            vol,
+        ])
 
     return result
 
@@ -157,19 +154,19 @@ def archive(label: str) -> None:
     creds   = _get_credentials()
     service = build("sheets", "v4", credentials=creds)
 
-    print("Reading Session tab…")
-    session_rows = _read_tab(service, spreadsheet_id, "Session!A:Z")
+    print("Reading Log tab…")
+    log_rows = _read_tab(service, spreadsheet_id, "Log!A:P")
 
     print("Reading Exercise Library…")
     library_rows = _read_tab(service, spreadsheet_id, "'Exercise Library'!A:D")
     muscle_lookup = _build_muscle_lookup(library_rows)
 
     today = date.today().isoformat()
-    print(f"Transforming to long format (label: '{label}', date: {today})…")
-    rows = _parse_session(session_rows, muscle_lookup, label, today)
+    print(f"Transforming to archive format (label: '{label}', date: {today})…")
+    rows = _parse_log(log_rows, muscle_lookup, label, today)
 
     if not rows:
-        print("No data found in Session tab. Nothing archived.")
+        print("No data found in Log tab. Nothing archived.")
         return
 
     print(f"Appending {len(rows)} rows to History tab…")
@@ -181,12 +178,12 @@ def archive(label: str) -> None:
         body={"values": rows},
     ).execute()
 
-    print(f"✓ Done. {len(rows)} rows archived under '{label}'.")
+    print(f"Done. {len(rows)} rows archived under '{label}'.")
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Archive the current mesocycle's Session data into the History tab."
+        description="Archive the current mesocycle's Log data into the History tab."
     )
     parser.add_argument(
         "--label", "-l",
