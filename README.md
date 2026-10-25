@@ -1,6 +1,6 @@
 # Workout Tracker
 
-A Google Sheet workout tracker built through the Sheets API. Tracks sets, reps, and weight, and recommends next-week targets using Reps in Reserve (RIR) and your post-session feedback.
+A Google Sheet workout tracker built through the Sheets API. Tracks per-set reps, weight, and session feedback in a single **Log** tab, and recommends next-week targets using Reps in Reserve (RIR) and your post-session feedback — inspired by the RP Hypertrophy app workflow.
 
 ---
 
@@ -53,10 +53,10 @@ Most things you'll want to adjust can be done right in the sheet without touchin
 | Add or rename exercises | **Exercise Library** tab (add row with exercise name + muscle group) |
 | Change exercises for your program | **Program** tab (edit exercise names, rep ranges, starting weight) |
 | Override a recommended weight | **Next Week** tab → amber cells in the `Rec. Weight` column — reps recalculate automatically |
-| Log a set | **Session** tab → fill Weight, Reps, Sets in the current week's columns |
-| Enter session feedback | **Feedback** tab → add a row with dropdowns |
+| Log a workout | **Log** tab → one row per exercise: Date, Wk, Day, Exercise, Weight, then S1–S4 reps after each set |
+| Enter session feedback | **Log** tab → same row as your sets: Pump, Tendon, Connection, Soreness Before dropdowns |
 
-Everything in **Next Week** and **Weekly Volume** recalculates automatically as you add rows to Log and Feedback.
+Everything in **Next Week** and **Weekly Volume** recalculates automatically as you fill in rows in the **Log** tab.
 
 ### Option B — Regenerate the sheet from Python (for structural changes)
 
@@ -118,8 +118,8 @@ All rules live in `src/progression.py` (pure Python, fully tested) and are mirro
 - Reps ≥ 15 → weight increase is **mandatory**
 - New weight = current × 1.05, rounded to nearest 2.5 lb, minimum +2.5 lb step
   - Example: 15 lb → 17.5 lb (never stays stuck at 15)
-- When weight changes, reps are volume-matched: `floor(prev_weight × prev_reps / new_weight)`
-  - Example: 15 lb × 15 reps = 225 → at 17.5 lb = 12 reps, at 20 lb = 11 reps
+- When weight changes, reps are volume-matched: `floor(prev_weight × prev_avg_reps / new_weight)`
+  - Example: 15 lb × 15 avg reps = 225 → at 17.5 lb = 12 reps, at 20 lb = 11 reps
 - Amber cells in **Next Week** are editable — override the weight for your available dumbbell sizes and reps recalculate from that override
 
 ### Tendon / joint pain rule
@@ -143,17 +143,37 @@ All rules live in `src/progression.py` (pure Python, fully tested) and are mirro
 
 | Tab | Purpose |
 |-----|---------|
+| **Help** | In-sheet user guide — workflow, column explanations, flag descriptions |
 | **Config** | All tunable parameters and feedback rule lookup tables |
-| **Exercise Library** | Exercise → muscle group lookup; add your own exercises here |
+| **Exercise Library** | 95 exercises → muscle group lookup; add your own exercises here |
 | **Program** | Exercises for the current mesocycle: name, rep range, starting weight, sets |
-| **Session** | Training log: one row per exercise, grouped by day, with Weight / Reps / Sets columns for each week |
-| **Feedback** | One row per exercise per session: soreness (before) + pump/tendon/connection (after) |
+| **Log** | Combined training log. One row per exercise per workout. Columns: Date, Wk, Day, Exercise, Weight, S1–S4 (per-set reps), Avg Reps (auto), Num Sets (auto), Pump, Tendon, Connection, Soreness Before, Notes |
 | **Next Week** | Auto-calculated recommendations: weight, reps, sets, target RIR, flags |
 | **Weekly Volume** | Sets per muscle group per week across the mesocycle |
+| **Volume Visual** | Charts from Weekly Volume: sets-per-week trend and mesocycle totals |
+| **Dashboard** | Per-exercise weight and volume trend charts; select an exercise from the dropdown |
 | **History** | Long-format archive of finished mesocycles, filled by `src/archive.py` |
 | **Future Plan** | Scratchpad for planning the next mesocycle's exercises, rep ranges, and starting weights |
 
-The sheet also includes **Help**, **Volume Visual**, and **Dashboard** tabs.
+### Log tab columns
+
+| Column | Content | Notes |
+|--------|---------|-------|
+| A Date | Date of the workout | |
+| B Wk | Week number (1–N) | Drives all formula lookups |
+| C Day | Day A / B / C | Dropdown |
+| D Exercise | Exercise name | Dropdown from Exercise Library |
+| E Wt (lb) | Weight used | |
+| F–I S1–S4 | Reps per set | Fill left-to-right; leave unused sets blank |
+| J Avg Reps | Average of non-zero S1–S4 | **Auto-computed — do not edit** |
+| K Num Sets | Count of non-zero sets | **Auto-computed — do not edit** |
+| L Pump | Post-set pump rating | Dropdown: great / mid / none |
+| M Tendon | Joint/tendon status | Dropdown: good / neutral / bad |
+| N Connection | Mind-muscle connection | Dropdown: great / good / not_at_all |
+| O Soreness Before | Muscle soreness entering the session | Dropdown: none / mild / still_sore |
+| P Notes | Free text | |
+
+The grey Avg Reps and Num Sets columns are populated by a single `ARRAYFORMULA` in row 2 — they spill automatically for every row you add. Never type into those columns.
 
 ---
 
@@ -173,14 +193,14 @@ uv run python src/archive.py --label "Oct 2026 Hypertrophy"
 
 If you omit `--label`, the script prompts for one. It:
 
-1. Reads the **Session** tab and looks up each exercise's muscle group in **Exercise Library**
-2. Converts it to long format: one row per exercise per week, with weight, reps, sets, and volume (weight × reps × sets)
-3. Appends the rows to the **History** tab, tagged with your label and today's date
+1. Reads the **Log** tab and looks up each exercise's primary muscle group in **Exercise Library**
+2. Computes avg reps and num sets from the log rows (uses the ARRAYFORMULA-computed values when available)
+3. Appends the rows to the **History** tab, tagged with your label and today's date — one row per exercise entry, with weight, avg reps, num sets, and volume (weight × avg reps × sets)
 
 Notes:
 - It targets the sheet whose ID is in `output/spreadsheet_id.txt`, which `main.py` writes each time it creates a sheet. That is the most recently generated sheet.
 - It only appends and never overwrites existing History rows. **Running it twice for the same mesocycle duplicates the rows**, so run it once per block.
-- Weeks with no data are skipped, so an unfinished block archives only the weeks you filled in.
+- Log rows with no exercise name or no set data are skipped, so an unfinished block archives only what you actually filled in.
 - Check the **History** tab afterward to confirm the rows look right.
 
 ### 3. Generate the new sheet
