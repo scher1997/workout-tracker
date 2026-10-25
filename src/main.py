@@ -63,7 +63,7 @@ def main() -> None:
     output_dir.mkdir(exist_ok=True)
     (output_dir / "spreadsheet_id.txt").write_text(spreadsheet_id)
 
-    print(f"\n✓ Done! Open your sheet here:\n  {url}\n")
+    print(f"\nDone! Open your sheet here:\n  {url}\n")
     print("Tip: bookmark the URL — re-running this script creates a NEW sheet each time.")
     print("     To archive a finished mesocycle: uv run python src/archive.py")
 
