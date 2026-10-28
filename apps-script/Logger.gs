@@ -104,3 +104,14 @@ function completeSession(opts) {
   ss.toast(notes[0], 'Workout Tracker', 5);
   return { logged: toWrite.length, duplicatesSkipped: skippedDupes, notCompleted: plan.skipped };
 }
+
+/** Completed Session exercises that are not in Log yet (would be lost by a clear/rebuild). */
+function countUnlogged(ss) {
+  var session = ss.getSheetByName(TABS.SESSION);
+  var log = ss.getSheetByName(TABS.LOG);
+  if (!session || !log) return 0;
+  var last = lastDataRow(session, SESSION_HEADERS.length);
+  if (last < 2) return 0;
+  var rows = session.getRange(2, 1, last - 1, SESSION_HEADERS.length).getValues();
+  return planLogRows(rows, readLogKeys(log), '').rows.length;
+}

@@ -129,16 +129,24 @@ function sessionHasUserInput(sessionSheet) {
 
 /**
  * Empty the Session tab body (headers, dropdowns and protection stay).
- * Pass 2 will make this refuse while entries are still unlogged.
+ * Completed exercises not yet in Log: the phone checkbox refuses; the menu asks first.
  */
 function clearSession(opts) {
   var interactive = !opts || opts.interactive !== false;
   var ss = SpreadsheetApp.getActive();
   var session = ss.getSheetByName(TABS.SESSION);
   if (!session) return;
+  var unlogged = countUnlogged(ss);
+  if (unlogged && !interactive) {
+    setStatus(ss, 'Not cleared: ' + unlogged + ' completed exercise(s) not logged yet. Tick Complete Session first.');
+    return;
+  }
   if (interactive && sessionHasUserInput(session)) {
     var ui = SpreadsheetApp.getUi();
-    if (ui.alert('Clear Session?', 'This deletes data entered in Session.', ui.ButtonSet.YES_NO) !== ui.Button.YES) return;
+    var msg = unlogged
+      ? unlogged + ' completed exercise(s) are NOT in Log yet and will be lost. Clear anyway?\n\n(Cancel, then run Complete session first.)'
+      : 'This deletes data entered in Session.';
+    if (ui.alert('Clear Session?', msg, ui.ButtonSet.YES_NO) !== ui.Button.YES) return;
   }
   var hadEntries = sessionHasUserInput(session);
   if (session.getLastRow() > 1) {
@@ -176,12 +184,18 @@ function buildSession(opts) {
   }
 
   if (sessionHasUserInput(session)) {
+    var unlogged = countUnlogged(ss);
     if (!interactive) {
-      setStatus(ss, 'Not rebuilt: Session has entered data. Log it first, or rebuild from the menu.');
+      setStatus(ss, unlogged
+        ? 'Not rebuilt: ' + unlogged + ' completed exercise(s) not logged yet. Tick Complete Session first.'
+        : 'Not rebuilt: Session has entered data. Clear it first, or rebuild from the menu.');
       return;
     }
     var ui = SpreadsheetApp.getUi();
-    if (ui.alert('Rebuild Session?', 'This replaces data already entered in Session.', ui.ButtonSet.YES_NO) !== ui.Button.YES) return;
+    var msg = unlogged
+      ? unlogged + ' completed exercise(s) are NOT in Log yet and will be lost. Rebuild anyway?\n\n(Cancel, then run Complete session first.)'
+      : 'This replaces data already entered in Session.';
+    if (ui.alert('Rebuild Session?', msg, ui.ButtonSet.YES_NO) !== ui.Button.YES) return;
   }
 
   if (session.getLastRow() > 1) {

@@ -105,6 +105,19 @@ function runSheetTests() {
     check('log: date is today', logged[0][0] instanceof Date, true);
     var second = completeSession({ interactive: false });
     check('log: second complete adds nothing', [second.logged, second.duplicatesSkipped, rowsOf(logSheet, LOG_HEADERS.length).length], [0, 2, 2]);
+
+    // 6. Clear / rebuild refuse (phone path) while completed exercises are unlogged
+    clearBody(logSheet, LOG_HEADERS.length);
+    check('unlogged count', countUnlogged(ss), 2);
+    clearSession({ interactive: false });
+    check('clear refused while unlogged', rowsOf(session, SESSION_HEADERS.length).length, 3);
+    buildSession({ interactive: false });
+    check('rebuild refused while unlogged', session.getRange(2, SESSION_COLS.S1).getValue(), 10);
+    check('status explains refusal', String(ss.getSheetByName(TABS.SETTINGS).getRange(SETTINGS_ROWS.STATUS, 2).getValue()).indexOf('not logged yet') > -1, true);
+    completeSession({ interactive: false });
+    check('unlogged count after logging', countUnlogged(ss), 0);
+    clearSession({ interactive: false });
+    check('clear allowed once logged', rowsOf(session, SESSION_HEADERS.length).length, 0);
   } catch (e) {
     check('sheet tests ran without error', String(e), '');
   } finally {

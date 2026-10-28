@@ -34,5 +34,6 @@ Then open the Sheet and run **Workout > Set up workbook** (authorize once).
 - Desktop: **Workout > Complete session (log it)**. Phone: tick **Complete Session** on Settings.
 - An exercise is logged once any of S1–S5 has reps. Untouched exercises are skipped; blank Actual Weight logs the Rec Weight.
 - One Log row per exercise, keyed by week + day + exercise. Already-logged exercises are skipped; the menu asks before logging them again, the phone checkbox just skips.
+- Clear Session and Build Session (phone checkbox) refuse while completed exercises are not in Log; the menu versions warn and ask first.
 - Session is left as is after logging (Clear Session / next-week rollover handles it).
 - After pulling this version into an existing Sheet, run **Set up workbook** once (Session gained an **Actual RIR** column, so later columns moved) and rebuild the Session.
