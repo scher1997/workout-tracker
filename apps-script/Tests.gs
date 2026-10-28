@@ -82,6 +82,66 @@ function runPureTests() {
   check('log: repeated key inside one session', planLogRows([logSess[0], logSess[0]], {}, 'D').duplicates.length, 1);
   check('log: empty session', planLogRows([], {}, 'D').rows.length, 0);
 
+  // Rollover (Pass 3). Log row = [date].concat(Session columns).
+  var logRow = function (week, day, exercise, weight, reps) {
+    var r = [];
+    for (var i = 0; i < LOG_HEADERS.length; i++) r.push('');
+    r[0] = 'D'; r[SESSION_COLS.WEEK] = week; r[SESSION_COLS.DAY] = day; r[SESSION_COLS.EXERCISE] = exercise;
+    r[SESSION_COLS.ACTUAL_WEIGHT] = weight;
+    reps.forEach(function (n, i) { r[SESSION_COLS.S1 + i] = n; });
+    return r;
+  };
+  var nextWeek = function (program, log, week) {
+    return planNextWeek(program, log, lookup, { week: week || 1, rirLadder: [3, 2, 1, 0], repMin: 8, repMax: 12 });
+  };
+  var prog = [['Mon', 'Zork Curl', 3, 15, '', '']];
+  var cell = function (plan, c) { return plan.rows[0][SESSION_COLS[c] - 1]; };
+
+  var wk2 = nextWeek(prog, [logRow(1, 'Mon', 'Zork Curl', 15, [10, 10, 10])]);
+  check('rollover: week 1 -> 2 stamps week and RIR 2', [cell(wk2, 'WEEK'), cell(wk2, 'RIR')], [2, 2]);
+  check('rollover: week 3 -> 4 gives RIR 0',
+    cell(nextWeek(prog, [logRow(3, 'Mon', 'Zork Curl', 15, [10, 10, 10])], 3), 'RIR'), 0);
+  check('rollover: below 15 reps keeps weight, +1 rep', [cell(wk2, 'REC_WEIGHT'), cell(wk2, 'REP_TARGET')], [15, 11]);
+  check('rollover: rep target stops at ceiling 13',
+    cell(nextWeek(prog, [logRow(1, 'Mon', 'Zork Curl', 15, [14, 14, 13])]), 'REP_TARGET'), 13);
+  check('rollover: reps below range -> rep min',
+    cell(nextWeek(prog, [logRow(1, 'Mon', 'Zork Curl', 15, [5, 5, 5])]), 'REP_TARGET'), 8);
+
+  var up = nextWeek(prog, [logRow(1, 'Mon', 'Zork Curl', 15, [15, 15, 15])]);
+  check('rollover: 15 reps -> weight increase', up.summary.increase.length, 1);
+  check('rollover: 15 reps never stays at old weight', cell(up, 'REC_WEIGHT') > 15, true);
+  check('rollover: reps averaged over sets (15,12,10 holds)',
+    nextWeek(prog, [logRow(1, 'Mon', 'Zork Curl', 15, [15, 12, 10])]).summary.hold.length, 1);
+
+  // 15 lb x 15 = 225 volume; 20 lb -> 11.25 reps
+  check('volume match 15x15 at 20 lb -> 11 reps', matchReps(15, 15, 20, 13), 11);
+  check('bump: 5% rounds to zero -> min 2.5', [bumpedWeight(15), bumpedWeight(20), bumpedWeight(40)], [17.5, 22.5, 42.5]);
+  check('bump: 5% of 100 -> 5, 60 -> 2.5 step', [bumpedWeight(100), bumpedWeight(60), bumpedWeight(150)], [105, 62.5, 157.5]);
+  check('increase carries volume: 15x15 -> 17.5 lb at 13 reps', [cell(up, 'REC_WEIGHT'), cell(up, 'REP_TARGET')], [17.5, 13]);
+  check('increase: matched reps capped at ceiling', matchReps(100, 15, 105, 13), 13);
+
+  // Overriding the weight recalculates reps
+  var prevRow = logRow(1, 'Mon', 'Zork Curl', 15, [15, 15, 15]);
+  check('override 20 lb -> 11 reps', recalcRepTarget(prevRow, 20, 12), 11);
+  check('override 30 lb -> 8 reps', recalcRepTarget(prevRow, 30, 12), 8);
+  check('override: no history -> null', recalcRepTarget(logRow(1, 'Mon', 'Zork Curl', '', []), 20, 12), null);
+  check('rep range text parses', [parseRepRange('8–12'), parseRepRange('x')], [{ min: 8, max: 12 }, null]);
+
+  // Skipped / never-logged exercises
+  var two = [['Mon', 'Zork Curl', 3, 15, '', ''], ['Tue', 'Wibble Press', 3, 40, '', '']];
+  var mixed = nextWeek(two, [logRow(1, 'Mon', 'Zork Curl', 15, [10, 10, 10])]);
+  check('rollover: never-logged exercise uses Program start weight',
+    [mixed.rows[1][SESSION_COLS.REC_WEIGHT - 1], mixed.summary.fresh], [40, ['Wibble Press']]);
+  var carried = nextWeek(prog, [logRow(1, 'Mon', 'zork curl', 20, [10, 10, 10])], 2);
+  check('rollover: skipped last week repeats latest weight/reps',
+    [cell(carried, 'REC_WEIGHT'), cell(carried, 'REP_TARGET'), carried.summary.carry.length], [20, 10, 1]);
+  check('rollover: latest week wins over older',
+    cell(nextWeek(prog, [logRow(1, 'Mon', 'Zork Curl', 15, [10, 10, 10]), logRow(2, 'Mon', 'Zork Curl', 17.5, [12, 12, 12])], 2), 'REC_WEIGHT'), 17.5);
+  check('rollover: same exercise on two days tracked separately',
+    nextWeek([['Mon', 'Zork Curl', 3, 15, '', ''], ['Wed', 'Zork Curl', 3, 15, '', '']],
+      [logRow(1, 'Mon', 'Zork Curl', 20, [15, 15, 15]), logRow(1, 'Wed', 'Zork Curl', 20, [8, 8, 8])])
+      .rows.map(function (r) { return r[SESSION_COLS.REC_WEIGHT - 1]; }), [22.5, 20]);
+
   // Header / column constants stay in sync
   check('header count matches cols', SESSION_HEADERS.length, Object.keys(SESSION_COLS).length);
   check('col index matches header', SESSION_HEADERS[SESSION_COLS.PUMP - 1], 'Pump');

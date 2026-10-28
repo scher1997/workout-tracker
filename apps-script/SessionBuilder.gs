@@ -37,6 +37,14 @@ function overrideKey(day, exercise) {
   return normalizeName(day) + '|' + normalizeName(exercise);
 }
 
+/** Rep range of a Program row: row values, else Settings defaults; reversed ranges are swapped. */
+function rowRepRange(r, settings, ov) {
+  ov = ov || {};
+  var min = ov.repMin != null ? ov.repMin : (parseNumber(r[4]) || settings.repMin);
+  var max = ov.repMax != null ? ov.repMax : (parseNumber(r[5]) || settings.repMax);
+  return min > max ? { min: max, max: min, swapped: true } : { min: min, max: max, swapped: false };
+}
+
 /**
  * programRows: [[day, exercise, sets, startWeight, repMin, repMax], ...]
  * settings:    {week, rirLadder, repMin, repMax}
@@ -64,12 +72,9 @@ function planSessionRows(programRows, lookup, settings, overrides) {
       out.warnings.push(where + ': no valid Sets, used ' + DEFAULTS.sets);
     }
 
-    var repMin = ov.repMin != null ? ov.repMin : (parseNumber(r[4]) || settings.repMin);
-    var repMax = ov.repMax != null ? ov.repMax : (parseNumber(r[5]) || settings.repMax);
-    if (repMin > repMax) {
-      out.warnings.push(where + ': Rep Min above Rep Max, swapped');
-      var t = repMin; repMin = repMax; repMax = t;
-    }
+    var range = rowRepRange(r, settings, ov);
+    if (range.swapped) out.warnings.push(where + ': Rep Min above Rep Max, swapped');
+    var repMin = range.min, repMax = range.max;
 
     var weight = ov.weight != null ? ov.weight : parseNumber(r[3]);
     var repTarget = ov.repTarget != null ? ov.repTarget : repMin;
@@ -107,6 +112,7 @@ function readSettings(ss) {
   var repMax = toPosInt(val(SETTINGS_ROWS.REP_MAX), DEFAULTS.repMax);
   return {
     week: toPosInt(val(SETTINGS_ROWS.WEEK), DEFAULTS.week),
+    mesoWeeks: toPosInt(val(SETTINGS_ROWS.MESO_WEEKS), DEFAULTS.mesoWeeks),
     rirLadder: parseRirLadder(val(SETTINGS_ROWS.RIR_LADDER)),
     repMin: Math.min(repMin, repMax),
     repMax: Math.max(repMin, repMax)
@@ -155,6 +161,14 @@ function clearSession(opts) {
   setStatus(ss, 'Session cleared' + (hadEntries ? ' (entered data discarded).' : '.'));
 }
 
+/** Replace the Session body with planned rows. */
+function writeSession(session, rows) {
+  if (session.getLastRow() > 1) {
+    session.getRange(2, 1, session.getLastRow() - 1, SESSION_HEADERS.length).clearContent();
+  }
+  session.getRange(2, 1, rows.length, SESSION_HEADERS.length).setValues(rows);
+}
+
 /**
  * Rebuild the Session tab for the current week.
  * opts.interactive (default true): ask before overwriting entered data. From the
@@ -198,10 +212,7 @@ function buildSession(opts) {
     if (ui.alert('Rebuild Session?', msg, ui.ButtonSet.YES_NO) !== ui.Button.YES) return;
   }
 
-  if (session.getLastRow() > 1) {
-    session.getRange(2, 1, session.getLastRow() - 1, SESSION_HEADERS.length).clearContent();
-  }
-  session.getRange(2, 1, plan.rows.length, SESSION_HEADERS.length).setValues(plan.rows);
+  writeSession(session, plan.rows);
 
   var notes = ['Built week ' + settings.week + ': ' + plan.rows.length + ' exercises, target RIR '
     + rirForWeek(settings.rirLadder, settings.week) + '.'];

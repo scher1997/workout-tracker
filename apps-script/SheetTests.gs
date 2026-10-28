@@ -47,6 +47,9 @@ function runSheetTests() {
   var sessBackup = rowsOf(session, SESSION_HEADERS.length);
   var logSheet = ss.getSheetByName(TABS.LOG);
   var logBackup = rowsOf(logSheet, LOG_HEADERS.length);
+  var settingsSheet = ss.getSheetByName(TABS.SETTINGS);
+  var weekBackup = settingsSheet.getRange(SETTINGS_ROWS.WEEK, 2).getValue();
+  var mesoBackup = settingsSheet.getRange(SETTINGS_ROWS.MESO_WEEKS, 2).getValue();
   try {
     var mapRows = rowsOf(ss.getSheetByName(TABS.MAP), 2).filter(function (r) { return r[0] && r[1]; });
     if (mapRows.length < 2) throw new Error('Exercise Map needs at least 2 rows to run build tests');
@@ -118,10 +121,47 @@ function runSheetTests() {
     check('unlogged count after logging', countUnlogged(ss), 0);
     clearSession({ interactive: false });
     check('clear allowed once logged', rowsOf(session, SESSION_HEADERS.length).length, 0);
+
+    // 7. Pass 3: Complete Week rolls the plan forward
+    var weekCell = settingsSheet.getRange(SETTINGS_ROWS.WEEK, 2);
+    weekCell.setValue(1);
+    settingsSheet.getRange(SETTINGS_ROWS.MESO_WEEKS, 2).setValue(6);
+    writeProgram([['Mon', exA, 3, 15, 8, 12], ['Tue', exB, 3, 100, 8, 12], ['Wed', exA, 3, 40, 8, 12]]);
+    clearBody(logSheet, LOG_HEADERS.length);
+    buildAndRead();
+    enter(2, { S1: 15, S2: 15, S3: 15 });   // 15 reps -> weight up (Rec Weight logged)
+    enter(3, { S1: 10, S2: 10, S3: 10 });   // holds weight, +1 rep
+    var rolled = completeWeek({ interactive: false });   // row 4 never touched
+    var week2 = rowsOf(session, SESSION_HEADERS.length);
+    check('rollover: ok, auto-logged the 2 completed exercises', [rolled.ok, rowsOf(logSheet, LOG_HEADERS.length).length], [true, 2]);
+    check('rollover: Settings week advanced', weekCell.getValue(), 2);
+    check('rollover: week 2 rows carry RIR 2', week2.map(function (r) { return [r[SESSION_COLS.WEEK - 1], r[SESSION_COLS.RIR - 1]]; }),
+      [[2, 2], [2, 2], [2, 2]]);
+    check('rollover: weights 15->17.5, 100 held, unlogged back to Program',
+      week2.map(function (r) { return r[SESSION_COLS.REC_WEIGHT - 1]; }), [17.5, 100, 40]);
+    check('rollover: rep targets 13 (volume match), 11, rep min',
+      week2.map(function (r) { return r[SESSION_COLS.REP_TARGET - 1]; }), [13, 11, 8]);
+    check('rollover: entry cells empty', week2.every(function (r) { return r[SESSION_COLS.S1 - 1] === ''; }), true);
+
+    // Overriding Rec Weight recalculates Rep Target (programmatic edits don't fire the trigger, so call it)
+    session.getRange(2, SESSION_COLS.REC_WEIGHT).setValue(20);
+    recalcRepsForWeightEdit(session.getRange(2, SESSION_COLS.REC_WEIGHT), 17.5);
+    check('override 17.5 -> 20 lb: reps 13 -> 11', session.getRange(2, SESSION_COLS.REP_TARGET).getValue(), 11);
+
+    // A second tick with nothing logged for week 2 must not skip ahead
+    var again = completeWeek({ interactive: false });
+    check('second Complete Week refused, week stays 2', [again.ok, weekCell.getValue()], [false, 2]);
+
+    // Last week of the mesocycle does not roll
+    settingsSheet.getRange(SETTINGS_ROWS.MESO_WEEKS, 2).setValue(2);
+    enter(2, { S1: 10, S2: 10, S3: 10 });
+    check('last mesocycle week refused', [completeWeek({ interactive: false }).ok, weekCell.getValue()], [false, 2]);
   } catch (e) {
     check('sheet tests ran without error', String(e), '');
   } finally {
     // Restore the user's own data
+    settingsSheet.getRange(SETTINGS_ROWS.WEEK, 2).setValue(weekBackup);
+    settingsSheet.getRange(SETTINGS_ROWS.MESO_WEEKS, 2).setValue(mesoBackup);
     clearBody(program, PROGRAM_HEADERS.length);
     if (progBackup.length) program.getRange(2, 1, progBackup.length, PROGRAM_HEADERS.length).setValues(progBackup);
     clearBody(logSheet, LOG_HEADERS.length);

@@ -10,6 +10,8 @@ function onOpen() {
     .addItem('Complete session (log it)', 'completeSession')
     .addItem('Clear session', 'clearSession')
     .addSeparator()
+    .addItem('Complete week (roll to next week)', 'completeWeek')
+    .addSeparator()
     .addItem('Run tests', 'runAllTests')
     .addItem('Run sheet tests', 'runSheetTests')
     .addToUi();
@@ -74,6 +76,7 @@ function setupSettings(ss, isNew) {
   labels[SETTINGS_ROWS.STATUS] = 'Status';
   labels[SETTINGS_ROWS.CLEAR_BOX] = 'Clear Session (tick)';
   labels[SETTINGS_ROWS.COMPLETE_BOX] = 'Complete Session (tick)';
+  labels[SETTINGS_ROWS.WEEK_BOX] = 'Complete Week (tick)';
   sh.getRange(1, 1, 1, 2).setValues([['Setting', 'Value']]).setFontWeight('bold').setBackground('#e8eaed');
   Object.keys(labels).forEach(function (r) { sh.getRange(Number(r), 1).setValue(labels[r]); });
   if (isNew) {
@@ -86,6 +89,7 @@ function setupSettings(ss, isNew) {
   sh.getRange(SETTINGS_ROWS.BUILD_BOX, 2).insertCheckboxes();
   sh.getRange(SETTINGS_ROWS.CLEAR_BOX, 2).insertCheckboxes();
   sh.getRange(SETTINGS_ROWS.COMPLETE_BOX, 2).insertCheckboxes();
+  sh.getRange(SETTINGS_ROWS.WEEK_BOX, 2).insertCheckboxes();
   sh.setColumnWidth(1, 230);
   sh.setColumnWidth(2, 360);
 }
@@ -133,10 +137,16 @@ function installPhoneTrigger(ss) {
   if (!exists) ScriptApp.newTrigger('onSettingsEdit').forSpreadsheet(ss).onEdit().create();
 }
 
+/**
+ * The one installable onEdit handler (name kept so existing triggers keep working).
+ * Settings checkboxes run actions; editing Rec Weight on Session recalculates Rep Target.
+ */
 function onSettingsEdit(e) {
   if (!e || !e.range) return;
   var r = e.range;
-  if (r.getSheet().getName() !== TABS.SETTINGS) return;
+  var sheetName = r.getSheet().getName();
+  if (sheetName === TABS.SESSION) { recalcRepsForWeightEdit(r, e.oldValue); return; }
+  if (sheetName !== TABS.SETTINGS) return;
   if (r.getColumn() !== 2 || r.getValue() !== true) return;
   if (r.getRow() === SETTINGS_ROWS.BUILD_BOX) {
     r.setValue(false);
@@ -147,5 +157,8 @@ function onSettingsEdit(e) {
   } else if (r.getRow() === SETTINGS_ROWS.COMPLETE_BOX) {
     r.setValue(false);
     completeSession({ interactive: false });
+  } else if (r.getRow() === SETTINGS_ROWS.WEEK_BOX) {
+    r.setValue(false);
+    completeWeek({ interactive: false });
   }
 }

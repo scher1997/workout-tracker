@@ -37,7 +37,17 @@ var LOG_HEADERS = ['Date'].concat(SESSION_HEADERS);
 
 // Settings tab: label in column A, value in column B.
 var SETTINGS_ROWS = {
-  WEEK: 2, MESO_WEEKS: 3, RIR_LADDER: 4, REP_MIN: 5, REP_MAX: 6, BUILD_BOX: 7, STATUS: 8, CLEAR_BOX: 9, COMPLETE_BOX: 10
+  WEEK: 2, MESO_WEEKS: 3, RIR_LADDER: 4, REP_MIN: 5, REP_MAX: 6, BUILD_BOX: 7, STATUS: 8, CLEAR_BOX: 9, COMPLETE_BOX: 10,
+  WEEK_BOX: 11
+};
+
+// Rollover rules (Rollover.gs). "Reps" for an exercise = average over the sets entered, rounded.
+var PROGRESSION = {
+  increasePct: 0.05,   // weight bump when it is time to go up
+  weightStep: 2.5,     // bumps round to the nearest step (lb)
+  minBump: 2.5,        // never bump by less than this, even if 5% rounds to zero
+  repCeiling: 13,      // next-week rep target stops here (or Rep Max if higher)
+  increaseAtReps: 15   // reps at or above this -> raise weight instead of chasing reps
 };
 
 var DEFAULTS = {

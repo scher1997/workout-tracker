@@ -1,4 +1,4 @@
-# Apps Script tracker (Pass 2: logging)
+# Apps Script tracker (Pass 3: Complete Week)
 
 Bound Google Sheets script. Program tab is the source of truth; `buildSession()` writes the Session tab for the current week.
 
@@ -9,6 +9,7 @@ Bound Google Sheets script. Program tab is the source of truth; `buildSession()`
 | `Setup.gs` | `setupWorkbook()`, menu, validation, protection, phone trigger |
 | `SessionBuilder.gs` | `planSessionRows()` (pure) and `buildSession()` (sheet I/O) |
 | `Logger.gs` | `planLogRows()` (pure) and `completeSession()` (appends completed Session rows to Log) |
+| `Rollover.gs` | Progression rules, `planNextWeek()` (pure) and `completeWeek()`; Rec Weight edit hook |
 | `Utils.gs` | Name/number helpers |
 | `Tests.gs` | `runPureTests()`, `runAllTests()` |
 
@@ -37,3 +38,15 @@ Then open the Sheet and run **Workout > Set up workbook** (authorize once).
 - Clear Session and Build Session (phone checkbox) refuse while completed exercises are not in Log; the menu versions warn and ask first.
 - Session is left as is after logging (Clear Session / next-week rollover handles it).
 - After pulling this version into an existing Sheet, run **Set up workbook** once (Session gained an **Actual RIR** column, so later columns moved) and rebuild the Session.
+
+## Complete Week (rollover)
+- Desktop: **Workout > Complete week (roll to next week)**. Phone: tick **Complete Week** on Settings. Never runs on its own.
+- Logs any completed Session exercises first, then builds next week's Session and bumps Settings > Current week. Program is not modified.
+- Refuses when nothing is logged for the current week (blocks double-ticks) and when the current week is the last of the mesocycle.
+- Rules (numbers in `PROGRESSION`, Config.gs): reps = average over sets entered.
+  - Reps >= 15: weight +5% rounded to 2.5 lb, minimum +2.5 lb; reps = prev weight x prev reps / new weight, capped at 13.
+  - Otherwise: same weight, rep target = reps + 1 (at least Rep Min, at most 13 or Rep Max).
+  - Target RIR comes from the Settings ladder (3, 2, 1, 0).
+  - Exercise skipped this week: repeats its latest logged weight/reps. Never logged: Program start weight.
+- Editing **Rec Weight** on Session recalculates **Rep Target** so weight x reps matches last week's logged volume (uses the installable onEdit trigger from Set up workbook).
+- Existing Sheet: run **Set up workbook** once to add the Complete Week checkbox row.
