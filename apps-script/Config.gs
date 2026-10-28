@@ -19,19 +19,19 @@ var MAP_HEADERS = ['Exercise', 'Muscle Group'];
 var SESSION_COLS = {
   WEEK: 1, DAY: 2, EXERCISE: 3, MUSCLE: 4, SETS: 5, REC_WEIGHT: 6, REP_RANGE: 7,
   REP_TARGET: 8, RIR: 9, SORENESS: 10, S1: 11, S2: 12, S3: 13, S4: 14, S5: 15,
-  ACTUAL_RIR: 16, ACTUAL_WEIGHT: 17, PUMP: 18, TENDON: 19, CONNECTION: 20, NOTES: 21
+  ACTUAL_RIR: 16, ACTUAL_WEIGHT: 17, PUMP: 18, TENDON: 19, CONNECTION: 20, NOTES: 21, FLAGS: 22
 };
 var SESSION_HEADERS = [
   'Week', 'Day', 'Exercise', 'Muscle Group', 'Sets', 'Rec Weight', 'Rep Range',
   'Rep Target', 'Target RIR', 'Soreness', 'S1', 'S2', 'S3', 'S4', 'S5',
-  'Actual RIR', 'Actual Weight', 'Pump', 'Tendon', 'Connection', 'Notes'
+  'Actual RIR', 'Actual Weight', 'Pump', 'Tendon', 'Connection', 'Notes', 'Flags'
 ];
 // Cells the user fills while training; a rebuild asks before wiping these.
 var SESSION_ENTRY_COLS = [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21];
 // Rep cells; an exercise counts as completed once any of these has a number.
 var SESSION_REP_COLS = [11, 12, 13, 14, 15];
 // Script-managed (warning-protected) columns.
-var SESSION_PROTECTED_COLS = [1, 2, 3, 4, 5, 7, 9];
+var SESSION_PROTECTED_COLS = [1, 2, 3, 4, 5, 7, 9, 22];
 
 var LOG_HEADERS = ['Date'].concat(SESSION_HEADERS);
 
@@ -48,6 +48,25 @@ var PROGRESSION = {
   minBump: 2.5,        // never bump by less than this, even if 5% rounds to zero
   repCeiling: 13,      // next-week rep target stops here (or Rep Max if higher)
   increaseAtReps: 15   // reps at or above this -> raise weight instead of chasing reps
+};
+
+// Feedback rules (Feedback.gs). Rating strings must match OPTIONS below (compared case-insensitively).
+// A blank rating counts as the neutral one: mid pump, neutral tendon, no connection flag, no soreness.
+var FEEDBACK = {
+  pumpRepBump: { great: 1, mid: 1, none: 2 },  // next-week rep target = reps performed + this
+  tendonBad: 'bad',                            // -> maintenance: hold weight, drop sets, no rep push
+  maintenanceSetDrop: 1,
+  connectionMiss: 'not at all',                // 1 week -> technique check, swapAfterWeeks in a row -> swap
+  swapAfterWeeks: 2,
+  stillSore: 'still sore',                     // Session target RIR gets this much easier
+  sorenessRirStep: 1,
+  underRecoveredWeeks: 2,                      // still sore this many weeks in a row -> trim-a-set flag
+  flags: {
+    maintain: 'Maintenance (tendon): weight held, one set fewer, no rep push',
+    technique: 'Technique check: no muscle connection last week',
+    swap: 'Swap suggested: no muscle connection 2 weeks in a row',
+    recovery: 'Under-recovered: still sore 2 weeks in a row, consider trimming a set'
+  }
 };
 
 var DEFAULTS = {

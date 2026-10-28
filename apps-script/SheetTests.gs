@@ -156,6 +156,10 @@ function runSheetTests() {
     settingsSheet.getRange(SETTINGS_ROWS.MESO_WEEKS, 2).setValue(2);
     enter(2, { S1: 10, S2: 10, S3: 10 });
     check('last mesocycle week refused', [completeWeek({ interactive: false }).ok, weekCell.getValue()], [false, 2]);
+
+    // 8. Pass 4: pump, tendon, connection, soreness (FeedbackTests.gs)
+    feedbackSheetTests(ss, check, { writeProgram: writeProgram, buildAndRead: buildAndRead, enter: enter, rowsOf: rowsOf,
+      completeWeek: completeWeek, exA: exA, exB: exB });
   } catch (e) {
     check('sheet tests ran without error', String(e), '');
   } finally {

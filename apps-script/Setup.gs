@@ -33,6 +33,7 @@ function setupWorkbook() {
   setupHeaderTab(ss, TABS.PROGRAM, PROGRAM_HEADERS);
   setupHeaderTab(ss, TABS.MAP, MAP_HEADERS);
   setupHeaderTab(ss, TABS.SESSION, SESSION_HEADERS);
+  ss.getSheetByName(TABS.SESSION).setColumnWidth(SESSION_COLS.FLAGS, 320);
   setupHeaderTab(ss, TABS.LOG, LOG_HEADERS);
   ss.getSheetByName(TABS.LOG).getRange('A2:A').setNumberFormat('yyyy-mm-dd');
   setupHeaderTab(ss, TABS.SUMMARY, ['Muscle Group']);
@@ -139,13 +140,18 @@ function installPhoneTrigger(ss) {
 
 /**
  * The one installable onEdit handler (name kept so existing triggers keep working).
- * Settings checkboxes run actions; editing Rec Weight on Session recalculates Rep Target.
+ * Settings checkboxes run actions; editing Rec Weight on Session recalculates Rep Target;
+ * editing Soreness on Session re-derives Target RIR and the under-recovered flag.
  */
 function onSettingsEdit(e) {
   if (!e || !e.range) return;
   var r = e.range;
   var sheetName = r.getSheet().getName();
-  if (sheetName === TABS.SESSION) { recalcRepsForWeightEdit(r, e.oldValue); return; }
+  if (sheetName === TABS.SESSION) {
+    recalcRepsForWeightEdit(r, e.oldValue);
+    applySorenessEdit(r);
+    return;
+  }
   if (sheetName !== TABS.SETTINGS) return;
   if (r.getColumn() !== 2 || r.getValue() !== true) return;
   if (r.getRow() === SETTINGS_ROWS.BUILD_BOX) {

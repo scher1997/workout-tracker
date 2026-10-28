@@ -40,7 +40,9 @@ function matchReps(prevWeight, prevReps, newWeight, ceiling) {
 /**
  * Next week's weight and rep target from one Log row.
  * carryOnly: the row is from an earlier week (exercise skipped since) -> repeat it, no progression.
- * Returns {action: 'increase'|'hold'|'carry', weight, repTarget, label} or null if the row has no usable weight/reps.
+ * Feedback (Feedback.gs): bad tendon -> 'maintain' (weight and reps held, caller drops a set);
+ * pump rating sets the rep bump on the 'hold' path (+1, or +2 for no pump).
+ * Returns {action: 'increase'|'hold'|'carry'|'maintain', weight, repTarget, label} or null if the row has no usable weight/reps.
  */
 function nextTarget(logRow, range, carryOnly) {
   var weight = parseNumber(logRow[SESSION_COLS.ACTUAL_WEIGHT]);
@@ -48,6 +50,9 @@ function nextTarget(logRow, range, carryOnly) {
   if (weight === null || weight <= 0 || reps === null) return null;
   var ceiling = repCeilingFor(range.max);
   var name = cleanName(logRow[SESSION_COLS.EXERCISE]);
+  if (isMaintenance(logRow)) {
+    return { action: 'maintain', weight: weight, repTarget: Math.min(Math.max(reps, range.min), ceiling), label: name };
+  }
   if (carryOnly) {
     return { action: 'carry', weight: weight, repTarget: Math.min(Math.max(reps, range.min), ceiling), label: name };
   }
@@ -56,7 +61,8 @@ function nextTarget(logRow, range, carryOnly) {
     return { action: 'increase', weight: up, repTarget: matchReps(weight, reps, up, ceiling),
       label: name + ' ' + weight + '→' + up };
   }
-  return { action: 'hold', weight: weight, repTarget: Math.min(Math.max(reps + 1, range.min), ceiling), label: name };
+  var bump = pumpRepBump(logRow[SESSION_COLS.PUMP]);
+  return { action: 'hold', weight: weight, repTarget: Math.min(Math.max(reps + bump, range.min), ceiling), label: name };
 }
 
 /** Latest Log entry per day|exercise up to maxWeek: {overrideKey: {week, row}}. Later rows win ties. */
@@ -76,12 +82,13 @@ function latestEntries(logRows, maxWeek) {
  * settings: {week (the week just finished), rirLadder, repMin, repMax}
  * Exercises logged this week progress; ones last logged earlier repeat that weight;
  * ones never logged fall back to Program's start weight.
- * Returns planSessionRows' result plus {week, summary: {increase, hold, carry, fresh}}.
+ * Feedback adds: maintenance sets (tendon) and Flags text (maintenance, technique check, swap).
+ * Returns planSessionRows' result plus {week, summary: {increase, hold, carry, fresh, maintain, technique, swap}}.
  */
 function planNextWeek(programRows, logRows, lookup, settings) {
   var latest = latestEntries(logRows, settings.week);
   var overrides = {};
-  var summary = { increase: [], hold: [], carry: [], fresh: [] };
+  var summary = { increase: [], hold: [], carry: [], fresh: [], maintain: [], technique: [], swap: [] };
   programRows.forEach(function (r) {
     var exercise = cleanName(r[1]);
     if (!exercise) return;
@@ -90,7 +97,19 @@ function planNextWeek(programRows, logRows, lookup, settings) {
     var found = latest[key];
     var res = found ? nextTarget(found.row, rowRepRange(r, settings), found.week < settings.week) : null;
     if (!res) { summary.fresh.push(exercise); return; }
-    overrides[key] = { weight: res.weight, repTarget: res.repTarget };
+    var ov = { weight: res.weight, repTarget: res.repTarget };
+    var flags = [];
+    if (res.action === 'maintain') {
+      ov.sets = maintenanceSets(toPosInt(r[2], DEFAULTS.sets));
+      flags.push(FEEDBACK.flags.maintain);
+    }
+    var connection = connectionAction(exerciseHistory(logRows, key, settings.week));
+    if (connection) {
+      summary[connection].push(exercise);
+      flags.push(FEEDBACK.flags[connection]);
+    }
+    ov.flags = flags.join(' | ');
+    overrides[key] = ov;
     summary[res.action].push(res.label);
   });
   var next = { week: settings.week + 1, rirLadder: settings.rirLadder, repMin: settings.repMin, repMax: settings.repMax };
@@ -210,7 +229,10 @@ function completeWeek(opts) {
   var s = plan.summary;
   var notes = ['Week ' + plan.week + ' ready (target RIR ' + rirForWeek(settings.rirLadder, plan.week) + ').'];
   if (s.increase.length) notes.push('Weight up: ' + s.increase.join(', ') + '.');
-  if (s.hold.length) notes.push(s.hold.length + ' same weight, +1 rep.');
+  if (s.hold.length) notes.push(s.hold.length + ' same weight, more reps.');
+  if (s.maintain.length) notes.push('Tendon maintenance (weight held, one set fewer): ' + s.maintain.join(', ') + '.');
+  if (s.technique.length) notes.push('Technique check: ' + s.technique.join(', ') + '.');
+  if (s.swap.length) notes.push('Consider swapping: ' + s.swap.join(', ') + '.');
   if (s.carry.length) notes.push('Not logged this week, repeated: ' + s.carry.join(', ') + '.');
   if (s.fresh.length) notes.push('No log history, Program start weight: ' + s.fresh.join(', ') + '.');
   if (plan.unknown.length) notes.push('Not in Exercise Map: ' + plan.unknown.join(', ') + '.');

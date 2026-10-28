@@ -48,7 +48,7 @@ function rowRepRange(r, settings, ov) {
 /**
  * programRows: [[day, exercise, sets, startWeight, repMin, repMax], ...]
  * settings:    {week, rirLadder, repMin, repMax}
- * overrides:   optional {overrideKey: {weight, sets, repMin, repMax, repTarget}}
+ * overrides:   optional {overrideKey: {weight, sets, repMin, repMax, repTarget, flags}}
  * Returns {rows, unknown, duplicates, warnings}.
  */
 function planSessionRows(programRows, lookup, settings, overrides) {
@@ -99,6 +99,7 @@ function planSessionRows(programRows, lookup, settings, overrides) {
     row[SESSION_COLS.REP_RANGE - 1] = repMin + '–' + repMax; // en dash: Sheets won't read it as a date
     row[SESSION_COLS.REP_TARGET - 1] = repTarget;
     row[SESSION_COLS.RIR - 1] = rir;
+    row[SESSION_COLS.FLAGS - 1] = ov.flags || '';
     out.rows.push(row);
   });
   return out;

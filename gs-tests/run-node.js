@@ -4,7 +4,7 @@ const path = require('path');
 const vm = require('vm');
 
 const dir = path.join(__dirname, '..', 'apps-script');
-const files = ['Config.gs', 'Utils.gs', 'SessionBuilder.gs', 'Logger.gs', 'Rollover.gs', 'Setup.gs', 'SheetTests.gs', 'Tests.gs'];
+const files = ['Config.gs', 'Utils.gs', 'SessionBuilder.gs', 'Logger.gs', 'Rollover.gs', 'Feedback.gs', 'Setup.gs', 'SheetTests.gs', 'FeedbackTests.gs', 'Tests.gs'];
 const ctx = vm.createContext({ console, Logger: { log: console.log } });
 files.forEach(f => vm.runInContext(fs.readFileSync(path.join(dir, f), 'utf8'), ctx, { filename: f }));
 

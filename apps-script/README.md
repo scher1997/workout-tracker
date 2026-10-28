@@ -50,3 +50,11 @@ Then open the Sheet and run **Workout > Set up workbook** (authorize once).
   - Exercise skipped this week: repeats its latest logged weight/reps. Never logged: Program start weight.
 - Editing **Rec Weight** on Session recalculates **Rep Target** so weight x reps matches last week's logged volume (uses the installable onEdit trigger from Set up workbook).
 - Existing Sheet: run **Set up workbook** once to add the Complete Week checkbox row.
+
+## Feedback rules (Pass 4; code in `Feedback.gs`, numbers and flag wording in `FEEDBACK`, Config.gs)
+Ratings are the Session dropdowns (Soreness, Pump, Tendon, Connection). A blank rating counts as neutral. Messages land in the script-managed **Flags** column (last column of Session and Log).
+- **Pump** (applies to the same-weight path): great/mid -> rep target = reps + 1; none -> reps + 2. Capped at the rep ceiling. The weight-increase path (15+ reps) keeps its volume-matched reps.
+- **Tendon**: bad -> maintenance next week: weight held, Program sets minus 1 (min 1), reps = last reps (no push), no weight increase. Flag "Maintenance". Maintenance is derived from the latest logged tendon rating, so one neutral/good (or blank) week ends it: the following week progresses normally from the same weight with the Program set count.
+- **Connection**: "not at all" -> "Technique check" flag; in 2 consecutive weeks -> "Swap suggested". A good/great week or a skipped week resets the count. Progression is not changed.
+- **Soreness** (per muscle group, per day; entered before training): "still sore" -> that session's Target RIR is one step easier (1 -> 2) and the rating spreads to the other rows with the same Day + Muscle Group. Sets are never changed. Still sore this week and last week -> "Under-recovered ... consider trimming a set" flag. Runs on the Session onEdit trigger (works from the phone once online); setting it back to none/mild restores the ladder RIR.
+- Existing Sheet: run **Set up workbook** once (Session and Log gain a **Flags** column) and rebuild Session.
