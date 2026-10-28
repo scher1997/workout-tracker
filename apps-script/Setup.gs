@@ -7,6 +7,7 @@ function onOpen() {
   SpreadsheetApp.getUi().createMenu('Workout')
     .addItem('Set up workbook', 'setupWorkbook')
     .addItem('Build session', 'buildSession')
+    .addItem('Complete session (log it)', 'completeSession')
     .addItem('Clear session', 'clearSession')
     .addSeparator()
     .addItem('Run tests', 'runAllTests')
@@ -31,6 +32,7 @@ function setupWorkbook() {
   setupHeaderTab(ss, TABS.MAP, MAP_HEADERS);
   setupHeaderTab(ss, TABS.SESSION, SESSION_HEADERS);
   setupHeaderTab(ss, TABS.LOG, LOG_HEADERS);
+  ss.getSheetByName(TABS.LOG).getRange('A2:A').setNumberFormat('yyyy-mm-dd');
   setupHeaderTab(ss, TABS.SUMMARY, ['Muscle Group']);
 
   if (fresh[TABS.MAP]) {
@@ -71,6 +73,7 @@ function setupSettings(ss, isNew) {
   labels[SETTINGS_ROWS.BUILD_BOX] = 'Build Session (tick)';
   labels[SETTINGS_ROWS.STATUS] = 'Status';
   labels[SETTINGS_ROWS.CLEAR_BOX] = 'Clear Session (tick)';
+  labels[SETTINGS_ROWS.COMPLETE_BOX] = 'Complete Session (tick)';
   sh.getRange(1, 1, 1, 2).setValues([['Setting', 'Value']]).setFontWeight('bold').setBackground('#e8eaed');
   Object.keys(labels).forEach(function (r) { sh.getRange(Number(r), 1).setValue(labels[r]); });
   if (isNew) {
@@ -82,6 +85,7 @@ function setupSettings(ss, isNew) {
   }
   sh.getRange(SETTINGS_ROWS.BUILD_BOX, 2).insertCheckboxes();
   sh.getRange(SETTINGS_ROWS.CLEAR_BOX, 2).insertCheckboxes();
+  sh.getRange(SETTINGS_ROWS.COMPLETE_BOX, 2).insertCheckboxes();
   sh.setColumnWidth(1, 230);
   sh.setColumnWidth(2, 360);
 }
@@ -101,6 +105,8 @@ function setupProgramValidation(ss) {
 
 function setupSessionValidation(ss) {
   var sh = ss.getSheetByName(TABS.SESSION);
+  // Clear first so dropdowns left on columns that moved in a layout change don't linger.
+  sh.getRange(2, 1, 200, SESSION_HEADERS.length).clearDataValidations();
   var apply = function (col, values) {
     sh.getRange(2, col, 200, 1).setDataValidation(listRule(values));
   };
@@ -138,5 +144,8 @@ function onSettingsEdit(e) {
   } else if (r.getRow() === SETTINGS_ROWS.CLEAR_BOX) {
     r.setValue(false);
     clearSession({ interactive: false });
+  } else if (r.getRow() === SETTINGS_ROWS.COMPLETE_BOX) {
+    r.setValue(false);
+    completeSession({ interactive: false });
   }
 }

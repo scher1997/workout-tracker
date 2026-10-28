@@ -45,6 +45,8 @@ function runSheetTests() {
   // Back up user data, then run build tests on a clean slate
   var progBackup = rowsOf(program, PROGRAM_HEADERS.length);
   var sessBackup = rowsOf(session, SESSION_HEADERS.length);
+  var logSheet = ss.getSheetByName(TABS.LOG);
+  var logBackup = rowsOf(logSheet, LOG_HEADERS.length);
   try {
     var mapRows = rowsOf(ss.getSheetByName(TABS.MAP), 2).filter(function (r) { return r[0] && r[1]; });
     if (mapRows.length < 2) throw new Error('Exercise Map needs at least 2 rows to run build tests');
@@ -81,12 +83,36 @@ function runSheetTests() {
     var pasted = buildAndRead();
     check('pasted plan equals typed plan except exercise casing', stripName(pasted), stripName(typed));
     check('pasted plan keeps map muscles', pasted.map(function (r) { return r[3]; }), [muscleA, muscleB]);
+    // 5. Pass 2: completing a session logs rows once
+    writeProgram([['Mon', exA, 3, 20, 8, 12], ['Tue', exB, 4, 50, 8, 12], ['Wed', exA, 2, 15, 8, 12]]);
+    buildAndRead();
+    var enter = function (r, vals) {
+      Object.keys(vals).forEach(function (k) { session.getRange(r, SESSION_COLS[k]).setValue(vals[k]); });
+    };
+    enter(2, { S1: 10, S2: 9, S3: 8, ACTUAL_RIR: 2, ACTUAL_WEIGHT: 22.5, PUMP: 'great', NOTES: 'felt good' });
+    enter(3, { S1: 12, S2: 11, S3: 10, S4: 9, ACTUAL_RIR: 1 });   // row 4 left untouched
+    clearBody(logSheet, LOG_HEADERS.length);
+    var first = completeSession({ interactive: false });
+    var logged = rowsOf(logSheet, LOG_HEADERS.length);
+    check('log: 2 of 3 exercises appended', logged.length, 2);
+    check('log: result counts', [first.logged, first.notCompleted], [2, 1]);
+    check('log: exercise/week/sets', logged.map(function (r) { return [r[SESSION_COLS.WEEK], r[SESSION_COLS.EXERCISE], r[SESSION_COLS.SETS]]; }),
+      [[week, exA, 3], [week, exB, 4]]);
+    check('log: reps, RIR, weight row 1', [logged[0][SESSION_COLS.S1], logged[0][SESSION_COLS.S2], logged[0][SESSION_COLS.S3],
+      logged[0][SESSION_COLS.ACTUAL_RIR], logged[0][SESSION_COLS.ACTUAL_WEIGHT]], [10, 9, 8, 2, 22.5]);
+    check('log: weight falls back to rec', logged[1][SESSION_COLS.ACTUAL_WEIGHT], 50);
+    check('log: feedback carried', [logged[0][SESSION_COLS.PUMP], logged[0][SESSION_COLS.NOTES]], ['great', 'felt good']);
+    check('log: date is today', logged[0][0] instanceof Date, true);
+    var second = completeSession({ interactive: false });
+    check('log: second complete adds nothing', [second.logged, second.duplicatesSkipped, rowsOf(logSheet, LOG_HEADERS.length).length], [0, 2, 2]);
   } catch (e) {
     check('sheet tests ran without error', String(e), '');
   } finally {
     // Restore the user's own data
     clearBody(program, PROGRAM_HEADERS.length);
     if (progBackup.length) program.getRange(2, 1, progBackup.length, PROGRAM_HEADERS.length).setValues(progBackup);
+    clearBody(logSheet, LOG_HEADERS.length);
+    if (logBackup.length) logSheet.getRange(2, 1, logBackup.length, LOG_HEADERS.length).setValues(logBackup);
     clearBody(session, SESSION_HEADERS.length);
     if (sessBackup.length) session.getRange(2, 1, sessBackup.length, SESSION_HEADERS.length).setValues(sessBackup);
   }

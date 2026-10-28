@@ -58,6 +58,30 @@ function runPureTests() {
   // Empty program
   check('empty program', planSessionRows([], lookup, base).rows.length, 0);
 
+  // Logger: completed exercises become Log rows
+  var logSess = planSessionRows([
+    ['Mon', 'Zork Curl', 3, 25, '', ''],
+    ['Mon', 'Wibble Press', 4, 40, '', ''],
+    ['Tue', 'Mystery Lift', 3, '', '', '']
+  ], lookup, base).rows;
+  var put = function (row, vals) { Object.keys(vals).forEach(function (k) { row[SESSION_COLS[k] - 1] = vals[k]; }); };
+  put(logSess[0], { S1: 10, S2: 9, S3: 8, ACTUAL_RIR: 2, ACTUAL_WEIGHT: 27.5, PUMP: 'great' });
+  put(logSess[1], { S1: 8, ACTUAL_RIR: 3 });   // blank Actual Weight -> falls back to rec weight
+  var logPlan = planLogRows(logSess, {}, 'D');
+  check('log: completed rows only', logPlan.rows.length, 2);
+  check('log: untouched exercise counted as skipped', logPlan.skipped, 1);
+  check('log: date leads, then session columns', logPlan.rows[0].length, LOG_HEADERS.length);
+  check('log: row values', [logPlan.rows[0][0], logPlan.rows[0][SESSION_COLS.WEEK], logPlan.rows[0][SESSION_COLS.EXERCISE],
+    logPlan.rows[0][SESSION_COLS.SETS], logPlan.rows[0][SESSION_COLS.S1], logPlan.rows[0][SESSION_COLS.S3],
+    logPlan.rows[0][SESSION_COLS.ACTUAL_RIR], logPlan.rows[0][SESSION_COLS.ACTUAL_WEIGHT]], ['D', 1, 'Zork Curl', 3, 10, 8, 2, 27.5]);
+  check('log: weight falls back to rec', logPlan.rows[1][SESSION_COLS.ACTUAL_WEIGHT], 40);
+  var existing = {};
+  existing[logKey(1, ' MON', 'zork  curl')] = true;
+  var again = planLogRows(logSess, existing, 'D');
+  check('log: already-logged goes to duplicates', [again.rows.length, again.duplicates.length], [1, 1]);
+  check('log: repeated key inside one session', planLogRows([logSess[0], logSess[0]], {}, 'D').duplicates.length, 1);
+  check('log: empty session', planLogRows([], {}, 'D').rows.length, 0);
+
   // Header / column constants stay in sync
   check('header count matches cols', SESSION_HEADERS.length, Object.keys(SESSION_COLS).length);
   check('col index matches header', SESSION_HEADERS[SESSION_COLS.PUMP - 1], 'Pump');
