@@ -38,7 +38,7 @@ var LOG_HEADERS = ['Date'].concat(SESSION_HEADERS);
 // Settings tab: label in column A, value in column B.
 var SETTINGS_ROWS = {
   WEEK: 2, MESO_WEEKS: 3, RIR_LADDER: 4, REP_MIN: 5, REP_MAX: 6, BUILD_BOX: 7, STATUS: 8, CLEAR_BOX: 9, COMPLETE_BOX: 10,
-  WEEK_BOX: 11
+  WEEK_BOX: 11, DELOAD_AT_END: 12, DELOAD_BOX: 13
 };
 
 // Rollover rules (Rollover.gs). "Reps" for an exercise = average over the sets entered, rounded.
@@ -66,6 +66,20 @@ var FEEDBACK = {
     technique: 'Technique check: no muscle connection last week',
     swap: 'Swap suggested: no muscle connection 2 weeks in a row',
     recovery: 'Under-recovered: still sore 2 weeks in a row, consider trimming a set'
+  }
+};
+
+// Deload rules (Deload.gs). A deload week = half the Program sets, weight held, easy effort.
+// Recommended when enough exercises stall; also appended after the last mesocycle week (Settings toggle).
+var DELOAD = {
+  stallWeeks: 3,       // an exercise is stalled after this many logged weeks with no weight or rep gain
+  stallShare: 0.5,     // deload recommended when this share of logged exercises is stalled...
+  minStalled: 2,       // ...and at least this many
+  rir: 4,              // Target RIR for a deload week
+  deloadPrefix: 'Deload',
+  stalledPrefix: 'Stalled',
+  flags: {
+    deload: 'Deload week: half sets, weight held, easy effort'
   }
 };
 

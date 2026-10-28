@@ -11,6 +11,7 @@ function onOpen() {
     .addItem('Clear session', 'clearSession')
     .addSeparator()
     .addItem('Complete week (roll to next week)', 'completeWeek')
+    .addItem('Make this week a deload', 'makeDeloadWeek')
     .addSeparator()
     .addItem('Run tests', 'runAllTests')
     .addItem('Run sheet tests', 'runSheetTests')
@@ -78,6 +79,8 @@ function setupSettings(ss, isNew) {
   labels[SETTINGS_ROWS.CLEAR_BOX] = 'Clear Session (tick)';
   labels[SETTINGS_ROWS.COMPLETE_BOX] = 'Complete Session (tick)';
   labels[SETTINGS_ROWS.WEEK_BOX] = 'Complete Week (tick)';
+  labels[SETTINGS_ROWS.DELOAD_AT_END] = 'Deload after last week (on/off)';
+  labels[SETTINGS_ROWS.DELOAD_BOX] = 'Deload this week (tick)';
   sh.getRange(1, 1, 1, 2).setValues([['Setting', 'Value']]).setFontWeight('bold').setBackground('#e8eaed');
   Object.keys(labels).forEach(function (r) { sh.getRange(Number(r), 1).setValue(labels[r]); });
   if (isNew) {
@@ -91,6 +94,11 @@ function setupSettings(ss, isNew) {
   sh.getRange(SETTINGS_ROWS.CLEAR_BOX, 2).insertCheckboxes();
   sh.getRange(SETTINGS_ROWS.COMPLETE_BOX, 2).insertCheckboxes();
   sh.getRange(SETTINGS_ROWS.WEEK_BOX, 2).insertCheckboxes();
+  var atEnd = sh.getRange(SETTINGS_ROWS.DELOAD_AT_END, 2);
+  var atEndWas = atEnd.getValue();
+  atEnd.insertCheckboxes();
+  if (atEndWas === '') atEnd.setValue(true);   // a persistent setting, on by default; never reset by onSettingsEdit
+  sh.getRange(SETTINGS_ROWS.DELOAD_BOX, 2).insertCheckboxes();
   sh.setColumnWidth(1, 230);
   sh.setColumnWidth(2, 360);
 }
@@ -166,5 +174,8 @@ function onSettingsEdit(e) {
   } else if (r.getRow() === SETTINGS_ROWS.WEEK_BOX) {
     r.setValue(false);
     completeWeek({ interactive: false });
+  } else if (r.getRow() === SETTINGS_ROWS.DELOAD_BOX) {
+    r.setValue(false);
+    makeDeloadWeek();
   }
 }

@@ -65,6 +65,12 @@ function nextTarget(logRow, range, carryOnly) {
   return { action: 'hold', weight: weight, repTarget: Math.min(Math.max(reps + bump, range.min), ceiling), label: name };
 }
 
+/** Empty plan summary: exercise names per bucket, plus the deload advice once planNextWeek has counted stalls. */
+function newSummary() {
+  return { increase: [], hold: [], carry: [], fresh: [], maintain: [], technique: [], swap: [], stalled: [], deload: [],
+    deloadAdvice: null };
+}
+
 /** Latest Log entry per day|exercise up to maxWeek: {overrideKey: {week, row}}. Later rows win ties. */
 function latestEntries(logRows, maxWeek) {
   var out = {};
@@ -83,35 +89,52 @@ function latestEntries(logRows, maxWeek) {
  * Exercises logged this week progress; ones last logged earlier repeat that weight;
  * ones never logged fall back to Program's start weight.
  * Feedback adds: maintenance sets (tendon) and Flags text (maintenance, technique check, swap).
- * Returns planSessionRows' result plus {week, summary: {increase, hold, carry, fresh, maintain, technique, swap}}.
+ * Deload (Deload.gs) adds: stall flags per exercise and a deload recommendation in the summary;
+ * deload weeks in the Log are ignored (progression resumes from the last working week).
+ * settings.deload true -> plan a deload week instead (planDeloadWeek).
+ * Returns planSessionRows' result plus {week, summary} (see newSummary).
  */
 function planNextWeek(programRows, logRows, lookup, settings) {
-  var latest = latestEntries(logRows, settings.week);
+  if (settings.deload) return planDeloadWeek(programRows, logRows, lookup, settings);
+  var working = withoutDeload(logRows);
+  var workingWeek = lastWorkingWeek(logRows, settings.week);
+  var lastDeload = lastDeloadWeek(logRows, settings.week);
+  var latest = latestEntries(working, settings.week);
   var overrides = {};
-  var summary = { increase: [], hold: [], carry: [], fresh: [], maintain: [], technique: [], swap: [] };
+  var summary = newSummary();
+  var logged = 0;
   programRows.forEach(function (r) {
     var exercise = cleanName(r[1]);
     if (!exercise) return;
     var key = overrideKey(r[0], exercise);
     if (overrides[key]) return; // duplicate Program rows share one result
     var found = latest[key];
-    var res = found ? nextTarget(found.row, rowRepRange(r, settings), found.week < settings.week) : null;
+    var res = found ? nextTarget(found.row, rowRepRange(r, settings), found.week < workingWeek) : null;
     if (!res) { summary.fresh.push(exercise); return; }
+    logged++;
     var ov = { weight: res.weight, repTarget: res.repTarget };
     var flags = [];
     if (res.action === 'maintain') {
       ov.sets = maintenanceSets(toPosInt(r[2], DEFAULTS.sets));
       flags.push(FEEDBACK.flags.maintain);
     }
-    var connection = connectionAction(exerciseHistory(logRows, key, settings.week));
+    var history = exerciseHistory(working, key, settings.week);
+    var connection = connectionAction(history);
     if (connection) {
       summary[connection].push(exercise);
       flags.push(FEEDBACK.flags[connection]);
+    }
+    var stall = exerciseStallStreak(history.filter(function (h) { return h.week > lastDeload; }));
+    if (stall >= DELOAD.stallWeeks) {
+      summary.stalled.push(exercise);
+      flags.push(stalledFlag(stall));
     }
     ov.flags = flags.join(' | ');
     overrides[key] = ov;
     summary[res.action].push(res.label);
   });
+  summary.deloadAdvice = { stalled: summary.stalled.length, logged: logged,
+    recommended: deloadRecommendation(summary.stalled.length, logged) };
   var next = { week: settings.week + 1, rirLadder: settings.rirLadder, repMin: settings.repMin, repMax: settings.repMax };
   var plan = planSessionRows(programRows, lookup, next, overrides);
   plan.week = next.week;
@@ -196,9 +219,15 @@ function completeWeek(opts) {
   var refuse = function (msg) { setStatus(ss, msg); ss.toast(msg, 'Workout Tracker', 6); return { ok: false, message: msg }; };
 
   var settings = readSettings(ss);
-  if (settings.week >= settings.mesoWeeks) {
-    return refuse('Week ' + settings.week + ' is the last of ' + settings.mesoWeeks
-      + '. Raise "Mesocycle length" in Settings to keep going (archive comes later).');
+  var onDeload = sessionIsDeload(session);
+  // Completing the last working week appends a deload week (Settings toggle); the deload week itself ends the meso.
+  var deloadNext = settings.week === settings.mesoWeeks && settings.deloadAtEnd && !onDeload;
+  if (settings.week >= settings.mesoWeeks && !deloadNext) {
+    return refuse(onDeload
+      ? 'Week ' + settings.week + ' was the deload week, so the mesocycle is complete. Start a new mesocycle'
+        + ' (archive and new-mesocycle build come later) or raise "Mesocycle length" in Settings.'
+      : 'Week ' + settings.week + ' is the last of ' + settings.mesoWeeks
+        + '. Raise "Mesocycle length" in Settings to keep going, or turn on "Deload after last week".');
   }
   var progRows = program.getLastRow() > 1
     ? program.getRange(2, 1, program.getLastRow() - 1, PROGRAM_HEADERS.length).getValues() : [];
@@ -222,17 +251,25 @@ function completeWeek(opts) {
 
   if (pending) completeSession({ interactive: false });
   var mapRows = map.getLastRow() > 1 ? map.getRange(2, 1, map.getLastRow() - 1, 2).getValues() : [];
+  settings.deload = deloadNext;
   var plan = planNextWeek(progRows, readLogRows(log), buildMuscleLookup(mapRows), settings);
   writeSession(session, plan.rows);
   ss.getSheetByName(TABS.SETTINGS).getRange(SETTINGS_ROWS.WEEK, 2).setValue(plan.week);
 
   var s = plan.summary;
-  var notes = ['Week ' + plan.week + ' ready (target RIR ' + rirForWeek(settings.rirLadder, plan.week) + ').'];
+  var notes = [deloadNext
+    ? 'Week ' + plan.week + ' is a deload week: half sets, weight held, target RIR ' + DELOAD.rir + '.'
+    : 'Week ' + plan.week + ' ready (target RIR ' + rirForWeek(settings.rirLadder, plan.week) + ').'];
   if (s.increase.length) notes.push('Weight up: ' + s.increase.join(', ') + '.');
   if (s.hold.length) notes.push(s.hold.length + ' same weight, more reps.');
   if (s.maintain.length) notes.push('Tendon maintenance (weight held, one set fewer): ' + s.maintain.join(', ') + '.');
   if (s.technique.length) notes.push('Technique check: ' + s.technique.join(', ') + '.');
   if (s.swap.length) notes.push('Consider swapping: ' + s.swap.join(', ') + '.');
+  if (s.stalled.length) notes.push('Stalled ' + DELOAD.stallWeeks + '+ weeks: ' + s.stalled.join(', ') + '.');
+  if (s.deloadAdvice && s.deloadAdvice.recommended) {
+    notes.push('Deload recommended (' + s.deloadAdvice.stalled + ' of ' + s.deloadAdvice.logged
+      + ' exercises stalled). Tick "Deload this week" in Settings to convert this week.');
+  }
   if (s.carry.length) notes.push('Not logged this week, repeated: ' + s.carry.join(', ') + '.');
   if (s.fresh.length) notes.push('No log history, Program start weight: ' + s.fresh.join(', ') + '.');
   if (plan.unknown.length) notes.push('Not in Exercise Map: ' + plan.unknown.join(', ') + '.');

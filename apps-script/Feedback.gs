@@ -135,7 +135,8 @@ function planSorenessUpdate(sessionRows, editedIdx, ladder, logRows) {
     var week = parseNumber(r[SESSION_COLS.WEEK - 1]);
     if (week === null) return;
     var soreness = r[SESSION_COLS.SORENESS - 1];
-    r[SESSION_COLS.RIR - 1] = sorenessRir(rirForWeek(ladder, week), soreness);
+    var baseRir = isDeloadFlags(r[SESSION_COLS.FLAGS - 1]) ? DELOAD.rir : rirForWeek(ladder, week);
+    r[SESSION_COLS.RIR - 1] = sorenessRir(baseRir, soreness);
     var flag = isUnderRecovered(logRows, r[SESSION_COLS.MUSCLE - 1], week, soreness) ? FEEDBACK.flags.recovery : '';
     r[SESSION_COLS.FLAGS - 1] = setFlagSegment(r[SESSION_COLS.FLAGS - 1], 'Under-recovered', flag);
     out.push(j);

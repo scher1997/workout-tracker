@@ -50,6 +50,7 @@ function runSheetTests() {
   var settingsSheet = ss.getSheetByName(TABS.SETTINGS);
   var weekBackup = settingsSheet.getRange(SETTINGS_ROWS.WEEK, 2).getValue();
   var mesoBackup = settingsSheet.getRange(SETTINGS_ROWS.MESO_WEEKS, 2).getValue();
+  var deloadAtEndBackup = settingsSheet.getRange(SETTINGS_ROWS.DELOAD_AT_END, 2).getValue();
   try {
     var mapRows = rowsOf(ss.getSheetByName(TABS.MAP), 2).filter(function (r) { return r[0] && r[1]; });
     if (mapRows.length < 2) throw new Error('Exercise Map needs at least 2 rows to run build tests');
@@ -152,20 +153,25 @@ function runSheetTests() {
     var again = completeWeek({ interactive: false });
     check('second Complete Week refused, week stays 2', [again.ok, weekCell.getValue()], [false, 2]);
 
-    // Last week of the mesocycle does not roll
+    // Last week of the mesocycle does not roll when "Deload after last week" is off
     settingsSheet.getRange(SETTINGS_ROWS.MESO_WEEKS, 2).setValue(2);
+    settingsSheet.getRange(SETTINGS_ROWS.DELOAD_AT_END, 2).setValue(false);
     enter(2, { S1: 10, S2: 10, S3: 10 });
-    check('last mesocycle week refused', [completeWeek({ interactive: false }).ok, weekCell.getValue()], [false, 2]);
+    check('last mesocycle week refused (deload toggle off)', [completeWeek({ interactive: false }).ok, weekCell.getValue()], [false, 2]);
 
+    var helpers = { writeProgram: writeProgram, buildAndRead: buildAndRead, enter: enter, rowsOf: rowsOf,
+      completeWeek: completeWeek, exA: exA, exB: exB };
     // 8. Pass 4: pump, tendon, connection, soreness (FeedbackTests.gs)
-    feedbackSheetTests(ss, check, { writeProgram: writeProgram, buildAndRead: buildAndRead, enter: enter, rowsOf: rowsOf,
-      completeWeek: completeWeek, exA: exA, exB: exB });
+    feedbackSheetTests(ss, check, helpers);
+    // 9. Pass 5: stall recommendation and deload weeks (DeloadTests.gs)
+    deloadSheetTests(ss, check, helpers);
   } catch (e) {
     check('sheet tests ran without error', String(e), '');
   } finally {
     // Restore the user's own data
     settingsSheet.getRange(SETTINGS_ROWS.WEEK, 2).setValue(weekBackup);
     settingsSheet.getRange(SETTINGS_ROWS.MESO_WEEKS, 2).setValue(mesoBackup);
+    settingsSheet.getRange(SETTINGS_ROWS.DELOAD_AT_END, 2).setValue(deloadAtEndBackup);
     clearBody(program, PROGRAM_HEADERS.length);
     if (progBackup.length) program.getRange(2, 1, progBackup.length, PROGRAM_HEADERS.length).setValues(progBackup);
     clearBody(logSheet, LOG_HEADERS.length);

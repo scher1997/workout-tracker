@@ -10,6 +10,8 @@ Bound Google Sheets script. Program tab is the source of truth; `buildSession()`
 | `SessionBuilder.gs` | `planSessionRows()` (pure) and `buildSession()` (sheet I/O) |
 | `Logger.gs` | `planLogRows()` (pure) and `completeSession()` (appends completed Session rows to Log) |
 | `Rollover.gs` | Progression rules, `planNextWeek()` (pure) and `completeWeek()`; Rec Weight edit hook |
+| `Feedback.gs` | Pump, tendon, connection and soreness rules |
+| `Deload.gs` | Stall detection, deload recommendation, deload week plan and `makeDeloadWeek()` |
 | `Utils.gs` | Name/number helpers |
 | `Tests.gs` | `runPureTests()`, `runAllTests()` |
 
@@ -42,7 +44,7 @@ Then open the Sheet and run **Workout > Set up workbook** (authorize once).
 ## Complete Week (rollover)
 - Desktop: **Workout > Complete week (roll to next week)**. Phone: tick **Complete Week** on Settings. Never runs on its own.
 - Logs any completed Session exercises first, then builds next week's Session and bumps Settings > Current week. Program is not modified.
-- Refuses when nothing is logged for the current week (blocks double-ticks) and when the current week is the last of the mesocycle.
+- Refuses when nothing is logged for the current week (blocks double-ticks) and when the current week is the last of the mesocycle (unless a deload week follows, see Deload).
 - Rules (numbers in `PROGRESSION`, Config.gs): reps = average over sets entered.
   - Reps >= 15: weight +5% rounded to 2.5 lb, minimum +2.5 lb; reps = prev weight x prev reps / new weight, capped at 13.
   - Otherwise: same weight, rep target = reps + 1 (at least Rep Min, at most 13 or Rep Max).
@@ -58,3 +60,12 @@ Ratings are the Session dropdowns (Soreness, Pump, Tendon, Connection). A blank 
 - **Connection**: "not at all" -> "Technique check" flag; in 2 consecutive weeks -> "Swap suggested". A good/great week or a skipped week resets the count. Progression is not changed.
 - **Soreness** (per muscle group, per day; entered before training): "still sore" -> that session's Target RIR is one step easier (1 -> 2) and the rating spreads to the other rows with the same Day + Muscle Group. Sets are never changed. Still sore this week and last week -> "Under-recovered ... consider trimming a set" flag. Runs on the Session onEdit trigger (works from the phone once online); setting it back to none/mild restores the ladder RIR.
 - Existing Sheet: run **Set up workbook** once (Session and Log gain a **Flags** column) and rebuild Session.
+
+## Deload (Pass 5; code in `Deload.gs`, numbers in `DELOAD`, Config.gs)
+A deload week = half the Program sets (rounded up, min 1), weight held, reps = last performed (no push), Target RIR 4, flag "Deload week". State is derived from the Log (a week is a deload if its rows carry the flag); nothing is stored.
+- **Stall**: an exercise is stalled after 3 consecutive logged weeks with no weight or rep gain over the week before (flag "Stalled N weeks"). Maintenance (tendon) weeks are skipped, a skipped week ends the run, and counting restarts after a deload. Progression is not changed by the flag.
+- **Recommendation**: when at least half of the logged exercises (minimum 2) are stalled, the Complete Week status says "Deload recommended". It never converts anything on its own.
+- **Deload this week**: **Workout > Make this week a deload**, or tick **Deload this week** on Settings. Rewrites the current, not-yet-started Session as a deload from Log history up to last week. Refuses if Session has entries or is already a deload.
+- **End of mesocycle**: with Settings > **Deload after last week** on (default), Complete Week on the last working week builds the next week as a deload (week N+1). Completing that deload week is refused (mesocycle complete; archive and new-mesocycle build come later). Off = the old refusal.
+- After a deload, progression resumes from the last working week (normal +1 rep at the same weight), not from the deload week's numbers. Soreness on a deload row eases from the deload RIR.
+- Existing Sheet: run **Set up workbook** once to add the two Settings rows (rows 12 and 13).
