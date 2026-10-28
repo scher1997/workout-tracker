@@ -12,6 +12,7 @@ Bound Google Sheets script. Program tab is the source of truth; `buildSession()`
 | `Rollover.gs` | Progression rules, `planNextWeek()` (pure) and `completeWeek()`; Rec Weight edit hook |
 | `Feedback.gs` | Pump, tendon, connection and soreness rules |
 | `Deload.gs` | Stall detection, deload recommendation, deload week plan and `makeDeloadWeek()` |
+| `Archive.gs` | Archive transform, start weights, `startNewMesocycle()` |
 | `Utils.gs` | Name/number helpers |
 | `Tests.gs` | `runPureTests()`, `runAllTests()` |
 
@@ -66,6 +67,16 @@ A deload week = half the Program sets (rounded up, min 1), weight held, reps = l
 - **Stall**: an exercise is stalled after 3 consecutive logged weeks with no weight or rep gain over the week before (flag "Stalled N weeks"). Maintenance (tendon) weeks are skipped, a skipped week ends the run, and counting restarts after a deload. Progression is not changed by the flag.
 - **Recommendation**: when at least half of the logged exercises (minimum 2) are stalled, the Complete Week status says "Deload recommended". It never converts anything on its own.
 - **Deload this week**: **Workout > Make this week a deload**, or tick **Deload this week** on Settings. Rewrites the current, not-yet-started Session as a deload from Log history up to last week. Refuses if Session has entries or is already a deload.
-- **End of mesocycle**: with Settings > **Deload after last week** on (default), Complete Week on the last working week builds the next week as a deload (week N+1). Completing that deload week is refused (mesocycle complete; archive and new-mesocycle build come later). Off = the old refusal.
+- **End of mesocycle**: with Settings > **Deload after last week** on (default), Complete Week on the last working week builds the next week as a deload (week N+1). Completing that deload week is refused (mesocycle complete: use Start New Mesocycle, see below). Off = the old refusal.
 - After a deload, progression resumes from the last working week (normal +1 rep at the same weight), not from the deload week's numbers. Soreness on a deload row eases from the deload RIR.
 - Existing Sheet: run **Set up workbook** once to add the two Settings rows (rows 12 and 13).
+
+## Archive and new mesocycle (Pass 6; code in `Archive.gs`, columns in `ARCHIVE_HEADERS`, Config.gs)
+The **Archive** tab is a chart-ready, long-term view across mesocycles: one row per exercise per day per week. Columns: Mesocycle, Meso Week, Overall Week, Date, Week Type, Day, Exercise, Muscle Group, Sets Done, Weight, Avg Reps, Volume, Target RIR, Actual RIR, Soreness, Pump, Tendon, Connection, Flags.
+- **Overall Week** keeps counting across mesocycles (meso week + the Archive's highest Overall Week), so it works as a time axis. **Date** is the week's earliest logged date. **Week Type** is Working or Deload.
+- **Volume** = weight x total reps entered; **Avg Reps** is to one decimal; **Sets Done** counts S1-S5 entries. Notes and the raw S1-S5 reps stay out of Archive. A re-logged exercise keeps its latest row.
+- **Start new mesocycle**: **Workout > Start new mesocycle (archive + reset)**, or tick **Start New Mesocycle** on Settings. In order: log any completed Session exercises, append to Archive and verify the row count, set Program > Start Weight to each exercise's last working-week weight (deload weeks ignored; unlogged exercises keep theirs), clear Session and Log, advance **Mesocycle name** ("Meso 1" -> "Meso 2"), set Current week to 1 and build the week-1 Session. Log is only cleared after the Archive copy checks out.
+- **Mesocycle name** (Settings row 14) is the Archive label. Archive refuses a label it already holds, so a double tick cannot duplicate rows.
+- The phone checkbox only runs when the mesocycle is finished (the deload week is the current week, or the last week with the deload toggle off, or past the end). The menu item can end an unfinished mesocycle early after a confirmation.
+- A pending progression bump is not applied to the start weight: it is the weight actually used in the last working week.
+- Existing Sheet: run **Set up workbook** once (adds the Archive tab and Settings rows 14 and 15; the name starts at "Meso 1").

@@ -12,6 +12,7 @@ function onOpen() {
     .addSeparator()
     .addItem('Complete week (roll to next week)', 'completeWeek')
     .addItem('Make this week a deload', 'makeDeloadWeek')
+    .addItem('Start new mesocycle (archive + reset)', 'startNewMesocycle')
     .addSeparator()
     .addItem('Run tests', 'runAllTests')
     .addItem('Run sheet tests', 'runSheetTests')
@@ -37,6 +38,8 @@ function setupWorkbook() {
   ss.getSheetByName(TABS.SESSION).setColumnWidth(SESSION_COLS.FLAGS, 320);
   setupHeaderTab(ss, TABS.LOG, LOG_HEADERS);
   ss.getSheetByName(TABS.LOG).getRange('A2:A').setNumberFormat('yyyy-mm-dd');
+  setupHeaderTab(ss, TABS.ARCHIVE, ARCHIVE_HEADERS);
+  ss.getSheetByName(TABS.ARCHIVE).getRange(2, ARCHIVE_COLS.DATE, 999, 1).setNumberFormat('yyyy-mm-dd');
   setupHeaderTab(ss, TABS.SUMMARY, ['Muscle Group']);
 
   if (fresh[TABS.MAP]) {
@@ -50,7 +53,7 @@ function setupWorkbook() {
   // Drop the empty default sheet and put tabs in a sensible order.
   var blank = ss.getSheetByName('Sheet1');
   if (blank && blank.getLastRow() === 0 && ss.getSheets().length > 1) ss.deleteSheet(blank);
-  [TABS.SETTINGS, TABS.PROGRAM, TABS.SESSION, TABS.LOG, TABS.SUMMARY, TABS.MAP].forEach(function (n, i) {
+  [TABS.SETTINGS, TABS.PROGRAM, TABS.SESSION, TABS.LOG, TABS.ARCHIVE, TABS.SUMMARY, TABS.MAP].forEach(function (n, i) {
     ss.setActiveSheet(ss.getSheetByName(n));
     ss.moveActiveSheet(i + 1);
   });
@@ -81,6 +84,8 @@ function setupSettings(ss, isNew) {
   labels[SETTINGS_ROWS.WEEK_BOX] = 'Complete Week (tick)';
   labels[SETTINGS_ROWS.DELOAD_AT_END] = 'Deload after last week (on/off)';
   labels[SETTINGS_ROWS.DELOAD_BOX] = 'Deload this week (tick)';
+  labels[SETTINGS_ROWS.MESO_NAME] = 'Mesocycle name (Archive label)';
+  labels[SETTINGS_ROWS.NEW_MESO_BOX] = 'Start New Mesocycle (tick)';
   sh.getRange(1, 1, 1, 2).setValues([['Setting', 'Value']]).setFontWeight('bold').setBackground('#e8eaed');
   Object.keys(labels).forEach(function (r) { sh.getRange(Number(r), 1).setValue(labels[r]); });
   if (isNew) {
@@ -99,6 +104,9 @@ function setupSettings(ss, isNew) {
   atEnd.insertCheckboxes();
   if (atEndWas === '') atEnd.setValue(true);   // a persistent setting, on by default; never reset by onSettingsEdit
   sh.getRange(SETTINGS_ROWS.DELOAD_BOX, 2).insertCheckboxes();
+  var mesoName = sh.getRange(SETTINGS_ROWS.MESO_NAME, 2);
+  if (cleanName(mesoName.getValue()) === '') mesoName.setNumberFormat('@').setValue('Meso 1');
+  sh.getRange(SETTINGS_ROWS.NEW_MESO_BOX, 2).insertCheckboxes();
   sh.setColumnWidth(1, 230);
   sh.setColumnWidth(2, 360);
 }
@@ -177,5 +185,8 @@ function onSettingsEdit(e) {
   } else if (r.getRow() === SETTINGS_ROWS.DELOAD_BOX) {
     r.setValue(false);
     makeDeloadWeek();
+  } else if (r.getRow() === SETTINGS_ROWS.NEW_MESO_BOX) {
+    r.setValue(false);
+    startNewMesocycle({ interactive: false });
   }
 }

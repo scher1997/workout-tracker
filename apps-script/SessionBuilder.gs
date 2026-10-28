@@ -116,6 +116,7 @@ function readSettings(ss) {
     mesoWeeks: toPosInt(val(SETTINGS_ROWS.MESO_WEEKS), DEFAULTS.mesoWeeks),
     rirLadder: parseRirLadder(val(SETTINGS_ROWS.RIR_LADDER)),
     deloadAtEnd: val(SETTINGS_ROWS.DELOAD_AT_END) !== false,   // blank (older workbook) counts as on
+    mesoName: cleanName(val(SETTINGS_ROWS.MESO_NAME)),
     repMin: Math.min(repMin, repMax),
     repMax: Math.max(repMin, repMax)
   };

@@ -9,6 +9,7 @@ var TABS = {
   MAP: 'Exercise Map',
   SESSION: 'Session',
   LOG: 'Log',
+  ARCHIVE: 'Archive',
   SUMMARY: 'Muscle Summary'
 };
 
@@ -35,10 +36,24 @@ var SESSION_PROTECTED_COLS = [1, 2, 3, 4, 5, 7, 9, 22];
 
 var LOG_HEADERS = ['Date'].concat(SESSION_HEADERS);
 
+// Archive tab (Archive.gs): chart-ready long format, one row per exercise per day per week, across mesocycles.
+var ARCHIVE_COLS = {
+  MESO: 1, MESO_WEEK: 2, OVERALL_WEEK: 3, DATE: 4, WEEK_TYPE: 5, DAY: 6, EXERCISE: 7, MUSCLE: 8,
+  SETS_DONE: 9, WEIGHT: 10, AVG_REPS: 11, VOLUME: 12, TARGET_RIR: 13, ACTUAL_RIR: 14,
+  SORENESS: 15, PUMP: 16, TENDON: 17, CONNECTION: 18, FLAGS: 19
+};
+var ARCHIVE_HEADERS = [
+  'Mesocycle', 'Meso Week', 'Overall Week', 'Date', 'Week Type', 'Day', 'Exercise', 'Muscle Group',
+  'Sets Done', 'Weight', 'Avg Reps', 'Volume', 'Target RIR', 'Actual RIR',
+  'Soreness', 'Pump', 'Tendon', 'Connection', 'Flags'
+];
+var ARCHIVE_WEEK_TYPES = { working: 'Working', deload: 'Deload' };
+
 // Settings tab: label in column A, value in column B.
 var SETTINGS_ROWS = {
   WEEK: 2, MESO_WEEKS: 3, RIR_LADDER: 4, REP_MIN: 5, REP_MAX: 6, BUILD_BOX: 7, STATUS: 8, CLEAR_BOX: 9, COMPLETE_BOX: 10,
-  WEEK_BOX: 11, DELOAD_AT_END: 12, DELOAD_BOX: 13
+  WEEK_BOX: 11, DELOAD_AT_END: 12, DELOAD_BOX: 13,
+  MESO_NAME: 14, NEW_MESO_BOX: 15
 };
 
 // Rollover rules (Rollover.gs). "Reps" for an exercise = average over the sets entered, rounded.

@@ -145,7 +145,7 @@ function runPureTests() {
   // Header / column constants stay in sync
   check('header count matches cols', SESSION_HEADERS.length, Object.keys(SESSION_COLS).length);
   check('col index matches header', SESSION_HEADERS[SESSION_COLS.PUMP - 1], 'Pump');
-  return results.concat(runFeedbackTests(), runDeloadTests());
+  return results.concat(runFeedbackTests(), runDeloadTests(), runArchiveTests());
 }
 
 function runAllTests() {

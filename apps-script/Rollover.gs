@@ -224,8 +224,8 @@ function completeWeek(opts) {
   var deloadNext = settings.week === settings.mesoWeeks && settings.deloadAtEnd && !onDeload;
   if (settings.week >= settings.mesoWeeks && !deloadNext) {
     return refuse(onDeload
-      ? 'Week ' + settings.week + ' was the deload week, so the mesocycle is complete. Start a new mesocycle'
-        + ' (archive and new-mesocycle build come later) or raise "Mesocycle length" in Settings.'
+      ? 'Week ' + settings.week + ' was the deload week, so the mesocycle is complete.'
+        + ' Tick "Start New Mesocycle" in Settings (archives the Log), or raise "Mesocycle length" to keep going.'
       : 'Week ' + settings.week + ' is the last of ' + settings.mesoWeeks
         + '. Raise "Mesocycle length" in Settings to keep going, or turn on "Deload after last week".');
   }

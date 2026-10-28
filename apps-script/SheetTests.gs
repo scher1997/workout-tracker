@@ -22,6 +22,7 @@ function runSheetTests() {
   expectedHeaders[TABS.MAP] = MAP_HEADERS;
   expectedHeaders[TABS.SESSION] = SESSION_HEADERS;
   expectedHeaders[TABS.LOG] = LOG_HEADERS;
+  expectedHeaders[TABS.ARCHIVE] = ARCHIVE_HEADERS;
   expectedHeaders[TABS.SUMMARY] = ['Muscle Group'];
   Object.keys(TABS).forEach(function (k) {
     var sh = ss.getSheetByName(TABS[k]);
@@ -51,6 +52,9 @@ function runSheetTests() {
   var weekBackup = settingsSheet.getRange(SETTINGS_ROWS.WEEK, 2).getValue();
   var mesoBackup = settingsSheet.getRange(SETTINGS_ROWS.MESO_WEEKS, 2).getValue();
   var deloadAtEndBackup = settingsSheet.getRange(SETTINGS_ROWS.DELOAD_AT_END, 2).getValue();
+  var nameBackup = settingsSheet.getRange(SETTINGS_ROWS.MESO_NAME, 2).getValue();
+  var archiveSheet = ss.getSheetByName(TABS.ARCHIVE);
+  var archiveBackup = archiveSheet ? rowsOf(archiveSheet, ARCHIVE_HEADERS.length) : [];
   try {
     var mapRows = rowsOf(ss.getSheetByName(TABS.MAP), 2).filter(function (r) { return r[0] && r[1]; });
     if (mapRows.length < 2) throw new Error('Exercise Map needs at least 2 rows to run build tests');
@@ -165,6 +169,8 @@ function runSheetTests() {
     feedbackSheetTests(ss, check, helpers);
     // 9. Pass 5: stall recommendation and deload weeks (DeloadTests.gs)
     deloadSheetTests(ss, check, helpers);
+    // 10. Pass 6: Archive and Start New Mesocycle (ArchiveTests.gs)
+    archiveSheetTests(ss, check, helpers);
   } catch (e) {
     check('sheet tests ran without error', String(e), '');
   } finally {
@@ -172,6 +178,11 @@ function runSheetTests() {
     settingsSheet.getRange(SETTINGS_ROWS.WEEK, 2).setValue(weekBackup);
     settingsSheet.getRange(SETTINGS_ROWS.MESO_WEEKS, 2).setValue(mesoBackup);
     settingsSheet.getRange(SETTINGS_ROWS.DELOAD_AT_END, 2).setValue(deloadAtEndBackup);
+    settingsSheet.getRange(SETTINGS_ROWS.MESO_NAME, 2).setValue(nameBackup);
+    if (archiveSheet) {
+      clearBody(archiveSheet, ARCHIVE_HEADERS.length);
+      if (archiveBackup.length) archiveSheet.getRange(2, 1, archiveBackup.length, ARCHIVE_HEADERS.length).setValues(archiveBackup);
+    }
     clearBody(program, PROGRAM_HEADERS.length);
     if (progBackup.length) program.getRange(2, 1, progBackup.length, PROGRAM_HEADERS.length).setValues(progBackup);
     clearBody(logSheet, LOG_HEADERS.length);
