@@ -35,7 +35,7 @@ var LOG_HEADERS = ['Date'].concat(SESSION_HEADERS);
 
 // Settings tab: label in column A, value in column B.
 var SETTINGS_ROWS = {
-  WEEK: 2, MESO_WEEKS: 3, RIR_LADDER: 4, REP_MIN: 5, REP_MAX: 6, BUILD_BOX: 7, STATUS: 8
+  WEEK: 2, MESO_WEEKS: 3, RIR_LADDER: 4, REP_MIN: 5, REP_MAX: 6, BUILD_BOX: 7, STATUS: 8, CLEAR_BOX: 9
 };
 
 var DEFAULTS = {

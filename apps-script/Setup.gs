@@ -7,8 +7,10 @@ function onOpen() {
   SpreadsheetApp.getUi().createMenu('Workout')
     .addItem('Set up workbook', 'setupWorkbook')
     .addItem('Build session', 'buildSession')
+    .addItem('Clear session', 'clearSession')
     .addSeparator()
     .addItem('Run tests', 'runAllTests')
+    .addItem('Run sheet tests', 'runSheetTests')
     .addToUi();
 }
 
@@ -68,6 +70,7 @@ function setupSettings(ss, isNew) {
   labels[SETTINGS_ROWS.REP_MAX] = 'Default rep max';
   labels[SETTINGS_ROWS.BUILD_BOX] = 'Build Session (tick)';
   labels[SETTINGS_ROWS.STATUS] = 'Status';
+  labels[SETTINGS_ROWS.CLEAR_BOX] = 'Clear Session (tick)';
   sh.getRange(1, 1, 1, 2).setValues([['Setting', 'Value']]).setFontWeight('bold').setBackground('#e8eaed');
   Object.keys(labels).forEach(function (r) { sh.getRange(Number(r), 1).setValue(labels[r]); });
   if (isNew) {
@@ -78,6 +81,7 @@ function setupSettings(ss, isNew) {
     sh.getRange(SETTINGS_ROWS.REP_MAX, 2).setValue(DEFAULTS.repMax);
   }
   sh.getRange(SETTINGS_ROWS.BUILD_BOX, 2).insertCheckboxes();
+  sh.getRange(SETTINGS_ROWS.CLEAR_BOX, 2).insertCheckboxes();
   sh.setColumnWidth(1, 230);
   sh.setColumnWidth(2, 360);
 }
@@ -127,8 +131,12 @@ function onSettingsEdit(e) {
   if (!e || !e.range) return;
   var r = e.range;
   if (r.getSheet().getName() !== TABS.SETTINGS) return;
-  if (r.getRow() !== SETTINGS_ROWS.BUILD_BOX || r.getColumn() !== 2) return;
-  if (r.getValue() !== true) return;
-  r.setValue(false);
-  buildSession({ interactive: false });
+  if (r.getColumn() !== 2 || r.getValue() !== true) return;
+  if (r.getRow() === SETTINGS_ROWS.BUILD_BOX) {
+    r.setValue(false);
+    buildSession({ interactive: false });
+  } else if (r.getRow() === SETTINGS_ROWS.CLEAR_BOX) {
+    r.setValue(false);
+    clearSession({ interactive: false });
+  }
 }

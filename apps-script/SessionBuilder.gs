@@ -128,6 +128,26 @@ function sessionHasUserInput(sessionSheet) {
 }
 
 /**
+ * Empty the Session tab body (headers, dropdowns and protection stay).
+ * Pass 2 will make this refuse while entries are still unlogged.
+ */
+function clearSession(opts) {
+  var interactive = !opts || opts.interactive !== false;
+  var ss = SpreadsheetApp.getActive();
+  var session = ss.getSheetByName(TABS.SESSION);
+  if (!session) return;
+  if (interactive && sessionHasUserInput(session)) {
+    var ui = SpreadsheetApp.getUi();
+    if (ui.alert('Clear Session?', 'This deletes data entered in Session.', ui.ButtonSet.YES_NO) !== ui.Button.YES) return;
+  }
+  var hadEntries = sessionHasUserInput(session);
+  if (session.getLastRow() > 1) {
+    session.getRange(2, 1, session.getLastRow() - 1, SESSION_HEADERS.length).clearContent();
+  }
+  setStatus(ss, 'Session cleared' + (hadEntries ? ' (entered data discarded).' : '.'));
+}
+
+/**
  * Rebuild the Session tab for the current week.
  * opts.interactive (default true): ask before overwriting entered data. From the
  * phone checkbox trigger no dialog is possible, so it refuses instead.
