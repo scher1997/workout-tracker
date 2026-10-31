@@ -23,7 +23,7 @@ function runSheetTests() {
   expectedHeaders[TABS.SESSION] = SESSION_HEADERS;
   expectedHeaders[TABS.LOG] = LOG_HEADERS;
   expectedHeaders[TABS.ARCHIVE] = ARCHIVE_HEADERS;
-  expectedHeaders[TABS.SUMMARY] = ['Muscle Group'];
+  expectedHeaders[TABS.SUMMARY] = [SUMMARY.headerLabel];
   Object.keys(TABS).forEach(function (k) {
     var sh = ss.getSheetByName(TABS[k]);
     check('tab exists: ' + TABS[k], !!sh, true);
@@ -55,6 +55,7 @@ function runSheetTests() {
   var nameBackup = settingsSheet.getRange(SETTINGS_ROWS.MESO_NAME, 2).getValue();
   var archiveSheet = ss.getSheetByName(TABS.ARCHIVE);
   var archiveBackup = archiveSheet ? rowsOf(archiveSheet, ARCHIVE_HEADERS.length) : [];
+  SUMMARY_STATE.paused = true;   // keep the earlier sections fast; the Muscle Summary section turns it back on
   try {
     var mapRows = rowsOf(ss.getSheetByName(TABS.MAP), 2).filter(function (r) { return r[0] && r[1]; });
     if (mapRows.length < 2) throw new Error('Exercise Map needs at least 2 rows to run build tests');
@@ -171,6 +172,8 @@ function runSheetTests() {
     deloadSheetTests(ss, check, helpers);
     // 10. Pass 6: Archive and Start New Mesocycle (ArchiveTests.gs)
     archiveSheetTests(ss, check, helpers);
+    // 11. Pass 7: Muscle Summary and Trends (MuscleSummaryTests.gs)
+    muscleSummarySheetTests(ss, check, helpers);
   } catch (e) {
     check('sheet tests ran without error', String(e), '');
   } finally {
@@ -189,6 +192,8 @@ function runSheetTests() {
     if (logBackup.length) logSheet.getRange(2, 1, logBackup.length, LOG_HEADERS.length).setValues(logBackup);
     clearBody(session, SESSION_HEADERS.length);
     if (sessBackup.length) session.getRange(2, 1, sessBackup.length, SESSION_HEADERS.length).setValues(sessBackup);
+    SUMMARY_STATE.paused = false;
+    refreshSummarySafe(ss);   // the summary follows the restored Log / Archive / Exercise Map
   }
 
   var failed = results.filter(function (r) { return !r.pass; });

@@ -14,6 +14,8 @@ function onOpen() {
     .addItem('Make this week a deload', 'makeDeloadWeek')
     .addItem('Start new mesocycle (archive + reset)', 'startNewMesocycle')
     .addSeparator()
+    .addItem('Refresh muscle summary + trends', 'refreshSummaryNow')
+    .addSeparator()
     .addItem('Run tests', 'runAllTests')
     .addItem('Run sheet tests', 'runSheetTests')
     .addToUi();
@@ -40,7 +42,8 @@ function setupWorkbook() {
   ss.getSheetByName(TABS.LOG).getRange('A2:A').setNumberFormat('yyyy-mm-dd');
   setupHeaderTab(ss, TABS.ARCHIVE, ARCHIVE_HEADERS);
   ss.getSheetByName(TABS.ARCHIVE).getRange(2, ARCHIVE_COLS.DATE, 999, 1).setNumberFormat('yyyy-mm-dd');
-  setupHeaderTab(ss, TABS.SUMMARY, ['Muscle Group']);
+  setupHeaderTab(ss, TABS.SUMMARY, [SUMMARY.headerLabel]);
+  setupTrends(ss);
 
   if (fresh[TABS.MAP]) {
     ss.getSheetByName(TABS.MAP).getRange(2, 1, SEED_EXERCISE_MAP.length, 2).setValues(SEED_EXERCISE_MAP);
@@ -49,11 +52,13 @@ function setupWorkbook() {
   setupSessionValidation(ss);
   setupSessionProtection(ss);
   installPhoneTrigger(ss);
+  refreshSummarySafe(ss);   // fills Muscle Summary + Trends (needs the Map and Settings rows above)
+  setupSummaryProtection(ss);
 
   // Drop the empty default sheet and put tabs in a sensible order.
   var blank = ss.getSheetByName('Sheet1');
   if (blank && blank.getLastRow() === 0 && ss.getSheets().length > 1) ss.deleteSheet(blank);
-  [TABS.SETTINGS, TABS.PROGRAM, TABS.SESSION, TABS.LOG, TABS.ARCHIVE, TABS.SUMMARY, TABS.MAP].forEach(function (n, i) {
+  [TABS.SETTINGS, TABS.PROGRAM, TABS.SESSION, TABS.LOG, TABS.ARCHIVE, TABS.SUMMARY, TABS.TRENDS, TABS.MAP].forEach(function (n, i) {
     ss.setActiveSheet(ss.getSheetByName(n));
     ss.moveActiveSheet(i + 1);
   });
@@ -86,6 +91,11 @@ function setupSettings(ss, isNew) {
   labels[SETTINGS_ROWS.DELOAD_BOX] = 'Deload this week (tick)';
   labels[SETTINGS_ROWS.MESO_NAME] = 'Mesocycle name (Archive label)';
   labels[SETTINGS_ROWS.NEW_MESO_BOX] = 'Start New Mesocycle (tick)';
+  labels[SETTINGS_ROWS.INCL_SECONDARY] = 'Summary: count secondary muscles';
+  labels[SETTINGS_ROWS.INCL_TERTIARY] = 'Summary: count tertiary muscles';
+  labels[SETTINGS_ROWS.SECONDARY_WEIGHT] = 'Secondary muscle credit per set';
+  labels[SETTINGS_ROWS.TERTIARY_WEIGHT] = 'Tertiary muscle credit per set';
+  labels[SETTINGS_ROWS.SUMMARY_BOX] = 'Refresh Muscle Summary (tick)';
   sh.getRange(1, 1, 1, 2).setValues([['Setting', 'Value']]).setFontWeight('bold').setBackground('#e8eaed');
   Object.keys(labels).forEach(function (r) { sh.getRange(Number(r), 1).setValue(labels[r]); });
   if (isNew) {
@@ -107,6 +117,14 @@ function setupSettings(ss, isNew) {
   var mesoName = sh.getRange(SETTINGS_ROWS.MESO_NAME, 2);
   if (cleanName(mesoName.getValue()) === '') mesoName.setNumberFormat('@').setValue('Meso 1');
   sh.getRange(SETTINGS_ROWS.NEW_MESO_BOX, 2).insertCheckboxes();
+  // Persistent summary options (like the deload toggle, never reset by onSettingsEdit).
+  sh.getRange(SETTINGS_ROWS.INCL_SECONDARY, 2).insertCheckboxes();
+  sh.getRange(SETTINGS_ROWS.INCL_TERTIARY, 2).insertCheckboxes();
+  var secW = sh.getRange(SETTINGS_ROWS.SECONDARY_WEIGHT, 2);
+  if (secW.getValue() === '') secW.setValue(SUMMARY.secondaryWeight);
+  var terW = sh.getRange(SETTINGS_ROWS.TERTIARY_WEIGHT, 2);
+  if (terW.getValue() === '') terW.setValue(SUMMARY.tertiaryWeight);
+  sh.getRange(SETTINGS_ROWS.SUMMARY_BOX, 2).insertCheckboxes();
   sh.setColumnWidth(1, 230);
   sh.setColumnWidth(2, 360);
 }
@@ -146,6 +164,30 @@ function setupSessionProtection(ss) {
   });
 }
 
+/** Trends tab: labels, the metric dropdown (the item dropdown is filled by refreshTrends). */
+function setupTrends(ss) {
+  var sh = ss.getSheetByName(TABS.TRENDS);
+  var L = TRENDS_LAYOUT;
+  sh.getRange(L.ITEM_ROW, 1, 3, 1).setValues([['Show'], ['Metric'], ['Note']]).setFontWeight('bold').setBackground('#e8eaed');
+  sh.getRange(L.METRIC_ROW, L.VALUE_COL).setDataValidation(listRule(SUMMARY.metrics));
+  sh.setColumnWidth(1, 90);
+  sh.setColumnWidth(L.VALUE_COL, 260);
+  sh.getRange(1, L.DATA_COL, 1, 2).setFontWeight('bold');
+  sh.getRange(1, L.ITEMS_COL).setFontWeight('bold');
+}
+
+/** Warning-only protection on the script-written tabs; the Trends dropdown cells stay free. */
+function setupSummaryProtection(ss) {
+  var summary = ss.getSheetByName(TABS.SUMMARY);
+  summary.getProtections(SpreadsheetApp.ProtectionType.SHEET).forEach(function (p) { p.remove(); });
+  summary.protect().setDescription('Script-managed').setWarningOnly(true);
+  var trends = ss.getSheetByName(TABS.TRENDS);
+  trends.getProtections(SpreadsheetApp.ProtectionType.RANGE).forEach(function (p) { p.remove(); });
+  trends.getRange(1, TRENDS_LAYOUT.DATA_COL, trends.getMaxRows(), TRENDS_LAYOUT.ITEMS_COL - TRENDS_LAYOUT.DATA_COL + 1)
+    .protect().setDescription('Script-managed').setWarningOnly(true);
+  trends.getRange(TRENDS_LAYOUT.NOTE_ROW, TRENDS_LAYOUT.VALUE_COL).protect().setDescription('Script-managed').setWarningOnly(true);
+}
+
 /** Installable onEdit so the Settings checkbox can build the session from the phone. */
 function installPhoneTrigger(ss) {
   var exists = ScriptApp.getProjectTriggers().some(function (t) {
@@ -168,7 +210,19 @@ function onSettingsEdit(e) {
     applySorenessEdit(r);
     return;
   }
+  if (sheetName === TABS.MAP) {
+    refreshSummarySafe(r.getSheet().getParent());   // new exercise or muscle group: summary follows, no code change
+    return;
+  }
+  if (sheetName === TABS.TRENDS) {
+    onTrendsEdit(r);
+    return;
+  }
   if (sheetName !== TABS.SETTINGS) return;
+  if (r.getColumn() === 2 && r.getRow() >= SETTINGS_ROWS.INCL_SECONDARY && r.getRow() <= SETTINGS_ROWS.TERTIARY_WEIGHT) {
+    refreshSummarySafe(r.getSheet().getParent());
+    return;
+  }
   if (r.getColumn() !== 2 || r.getValue() !== true) return;
   if (r.getRow() === SETTINGS_ROWS.BUILD_BOX) {
     r.setValue(false);
@@ -188,5 +242,8 @@ function onSettingsEdit(e) {
   } else if (r.getRow() === SETTINGS_ROWS.NEW_MESO_BOX) {
     r.setValue(false);
     startNewMesocycle({ interactive: false });
+  } else if (r.getRow() === SETTINGS_ROWS.SUMMARY_BOX) {
+    r.setValue(false);
+    refreshSummaryNow();
   }
 }

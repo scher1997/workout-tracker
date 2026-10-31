@@ -13,6 +13,8 @@ Bound Google Sheets script. Program tab is the source of truth; `buildSession()`
 | `Feedback.gs` | Pump, tendon, connection and soreness rules |
 | `Deload.gs` | Stall detection, deload recommendation, deload week plan and `makeDeloadWeek()` |
 | `Archive.gs` | Archive transform, start weights, `startNewMesocycle()` |
+| `MuscleSummary.gs` | Muscle Summary pivot: roles from Exercise Map, `planMuscleSummary()` (pure), `refreshSummarySafe()` |
+| `Trends.gs` | Trends dashboard: item/metric series (pure), chart, dropdown edit hook |
 | `Utils.gs` | Name/number helpers |
 | `Tests.gs` | `runPureTests()`, `runAllTests()` |
 
@@ -80,3 +82,13 @@ The **Archive** tab is a chart-ready, long-term view across mesocycles: one row 
 - The phone checkbox only runs when the mesocycle is finished (the deload week is the current week, or the last week with the deload toggle off, or past the end). The menu item can end an unfinished mesocycle early after a confirmation.
 - A pending progression bump is not applied to the start weight: it is the weight actually used in the last working week.
 - Existing Sheet: run **Set up workbook** once (adds the Archive tab and Settings rows 14 and 15; the name starts at "Meso 1").
+
+## Muscle Summary and Trends (Pass 7; code in `MuscleSummary.gs` and `Trends.gs`, constants in `SUMMARY` / `TRENDS_LAYOUT`, Config.gs)
+- **Muscle Summary** tab (script-written, warning-protected): rows = muscle groups, columns = Overall Week, cells = sets done. Row 2 names the mesocycle ("Meso 1 · Deload" on deload weeks), last row is Total, darker green = more sets. Skipped weeks show as zero columns.
+- **Data**: Archive (past mesocycles) + the current Log, so the weeks keep counting after Start New Mesocycle. Sets = sets actually done (S1-S5 entries), same as Archive "Sets Done".
+- **Exercise Map** has three muscle columns: **Muscle Group** (primary), **Secondary Muscles**, **Tertiary Muscles** (comma lists, optional). The muscle-group rows are every name in those columns, in map order; a new group such as Adductors appears as soon as it is typed into the map (zeros until logged). Nothing is named in code.
+- The muscle of a logged exercise is looked up in the map when the summary refreshes, so adding an exercise to the map also fixes earlier `?? not in Exercise Map` rows. An exercise missing from the map keeps the muscle stored on its Log row; anything still unknown gets its own last row, so totals always add up.
+- **Secondary / tertiary counting** (Settings rows 16-19): tick *count secondary / tertiary muscles* and set the credit per set (defaults 0.5 and 0.25). Primary always counts 1. A muscle named in several roles of one exercise counts once, at the highest role that is switched on. Both boxes off = a plain primary-only hand count. A caption under the pivot says what is being counted. Total = sum of the rows, so it includes the fractional credit.
+- **Trends** tab: pick an item in B1 (*Muscle: x* or *Exercise: x*) and a metric in B2 (Sets, Volume, Top weight, Avg reps). Chart below, data block in J:K, item list in M (script-managed). Muscles only have Sets and Volume (other metrics fall back to Sets, with a note); muscle Volume follows the same secondary/tertiary options.
+- **Refresh** is automatic after Complete Session, Complete Week and Start New Mesocycle, and when you edit the Exercise Map, the Settings rows 16-19 or the Trends dropdowns (same installable onEdit trigger, no new authorization). Manual: **Workout > Refresh muscle summary + trends**, or tick **Refresh Muscle Summary** on Settings. A summary error is logged and never blocks logging.
+- Existing Sheet: run **Set up workbook** once (adds the Trends tab, Exercise Map columns C-D and Settings rows 16-20), then **Run sheet tests**.

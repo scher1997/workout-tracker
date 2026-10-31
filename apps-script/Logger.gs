@@ -102,6 +102,7 @@ function completeSession(opts) {
   if (!toWrite.length && !skippedDupes && !plan.skipped) notes = ['Nothing to log: Session is empty.'];
   setStatus(ss, notes.join(' '));
   ss.toast(notes[0], 'Workout Tracker', 5);
+  if (toWrite.length) refreshSummarySafe(ss);
   return { logged: toWrite.length, duplicatesSkipped: skippedDupes, notCompleted: plan.skipped };
 }
 

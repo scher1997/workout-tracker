@@ -276,5 +276,6 @@ function completeWeek(opts) {
   notes = notes.concat(plan.warnings);
   setStatus(ss, notes.join(' '));
   ss.toast(notes[0], 'Workout Tracker', 5);
+  refreshSummarySafe(ss);
   return { ok: true, week: plan.week, summary: s };
 }

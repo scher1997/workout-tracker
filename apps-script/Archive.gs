@@ -203,5 +203,6 @@ function startNewMesocycle(opts) {
   if (early) notes.push('(Ended early.)');
   setStatus(ss, notes.join(' '));
   ss.toast(notes[0], 'Workout Tracker', 6);
+  refreshSummarySafe(ss);   // history now lives in Archive; the summary must read it from there
   return { ok: true, archived: rows.length, label: label, next: next, updatedWeights: weights.updated.length };
 }

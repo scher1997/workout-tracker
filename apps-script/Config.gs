@@ -10,11 +10,13 @@ var TABS = {
   SESSION: 'Session',
   LOG: 'Log',
   ARCHIVE: 'Archive',
-  SUMMARY: 'Muscle Summary'
+  SUMMARY: 'Muscle Summary',
+  TRENDS: 'Trends'
 };
 
 var PROGRAM_HEADERS = ['Day', 'Exercise', 'Sets', 'Start Weight', 'Rep Min', 'Rep Max'];
-var MAP_HEADERS = ['Exercise', 'Muscle Group'];
+// Muscle Group = primary muscle. Secondary/Tertiary are optional comma lists (counted when Settings says so).
+var MAP_HEADERS = ['Exercise', 'Muscle Group', 'Secondary Muscles', 'Tertiary Muscles'];
 
 // 1-based column index of each Session column. Header order is derived from this.
 var SESSION_COLS = {
@@ -53,7 +55,8 @@ var ARCHIVE_WEEK_TYPES = { working: 'Working', deload: 'Deload' };
 var SETTINGS_ROWS = {
   WEEK: 2, MESO_WEEKS: 3, RIR_LADDER: 4, REP_MIN: 5, REP_MAX: 6, BUILD_BOX: 7, STATUS: 8, CLEAR_BOX: 9, COMPLETE_BOX: 10,
   WEEK_BOX: 11, DELOAD_AT_END: 12, DELOAD_BOX: 13,
-  MESO_NAME: 14, NEW_MESO_BOX: 15
+  MESO_NAME: 14, NEW_MESO_BOX: 15,
+  INCL_SECONDARY: 16, INCL_TERTIARY: 17, SECONDARY_WEIGHT: 18, TERTIARY_WEIGHT: 19, SUMMARY_BOX: 20
 };
 
 // Rollover rules (Rollover.gs). "Reps" for an exercise = average over the sets entered, rounded.
@@ -115,6 +118,27 @@ var OPTIONS = {
 };
 
 var UNKNOWN_MUSCLE = '?? not in Exercise Map';
+
+// Muscle Summary + Trends (MuscleSummary.gs, Trends.gs). Sets = sets actually done (S1-S5 reps entered).
+var SUMMARY = {
+  secondaryWeight: 0.5,    // default share of a set credited to a secondary muscle (Settings row 18 overrides)
+  tertiaryWeight: 0.25,    // same for tertiary (Settings row 19)
+  headerLabel: 'Muscle Group',
+  mesoRowLabel: 'Mesocycle',
+  totalLabel: 'Total',
+  deloadSuffix: ' · Deload',
+  weekPrefix: 'W',                              // chart axis label: W1, W2, ...
+  musclePrefix: 'Muscle: ',                     // Trends item dropdown entries
+  exercisePrefix: 'Exercise: ',
+  metrics: ['Sets', 'Volume', 'Top weight', 'Avg reps'],
+  muscleMetrics: ['Sets', 'Volume']             // weight and reps only make sense per exercise
+};
+
+// Trends tab cells (1-based). Chart data and the item list sit to the right of the chart.
+var TRENDS_LAYOUT = {
+  ITEM_ROW: 1, METRIC_ROW: 2, NOTE_ROW: 3, VALUE_COL: 2, CHART_ROW: 5,
+  DATA_COL: 10, ITEMS_COL: 13
+};
 
 // Starter rows written to a brand-new Exercise Map tab only. Edit the tab, not this.
 var SEED_EXERCISE_MAP = [

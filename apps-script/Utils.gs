@@ -19,6 +19,14 @@ function parseNumber(value) {
   return match ? parseFloat(match[0]) : null;
 }
 
+/** Non-negative weight from a cell, else the fallback (0 is allowed: it switches that role off). */
+function toWeight(value, fallback) {
+  var n = parseNumber(value);
+  return n !== null && n >= 0 ? n : fallback;
+}
+
+function round2(x) { return Math.round(x * 100) / 100; }
+
 /** Positive integer from a cell, else the fallback. */
 function toPosInt(value, fallback) {
   var n = parseNumber(value);
