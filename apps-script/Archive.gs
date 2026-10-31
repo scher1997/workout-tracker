@@ -162,7 +162,7 @@ function startNewMesocycle(opts) {
     if (ui.alert('Start a new mesocycle?', msg, ui.ButtonSet.YES_NO) !== ui.Button.YES) return { ok: false, cancelled: true };
   }
 
-  if (pending) completeSession({ interactive: false });
+  if (pending) withSummaryPaused(function () { completeSession({ interactive: false }); });   // startNewMesocycle refreshes once at the end
   var logRows = readLogRows(log);
   var rows = archiveRows(logRows, label, maxOverallWeek(archBody));
   if (!rows.length) return refuse('Nothing in Log to archive yet.');

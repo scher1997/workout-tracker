@@ -123,18 +123,15 @@ function runSheetTests() {
     var second = completeSession({ interactive: false });
     check('log: second complete adds nothing', [second.logged, second.duplicatesSkipped, rowsOf(logSheet, LOG_HEADERS.length).length], [0, 2, 2]);
 
-    // 6. Clear / rebuild refuse (phone path) while completed exercises are unlogged
+    // 6. Phone path: rebuild logs unlogged exercises and refuses; clear logs them first, then clears
     clearBody(logSheet, LOG_HEADERS.length);
     check('unlogged count', countUnlogged(ss), 2);
-    clearSession({ interactive: false });
-    check('clear refused while unlogged', rowsOf(session, SESSION_HEADERS.length).length, 3);
     buildSession({ interactive: false });
-    check('rebuild refused while unlogged', session.getRange(2, SESSION_COLS.S1).getValue(), 10);
-    check('status explains refusal', String(ss.getSheetByName(TABS.SETTINGS).getRange(SETTINGS_ROWS.STATUS, 2).getValue()).indexOf('not logged yet') > -1, true);
-    completeSession({ interactive: false });
-    check('unlogged count after logging', countUnlogged(ss), 0);
+    check('rebuild refused but exercises logged first', [session.getRange(2, SESSION_COLS.S1).getValue(), countUnlogged(ss)], [10, 0]);
+    check('status explains refusal', String(ss.getSheetByName(TABS.SETTINGS).getRange(SETTINGS_ROWS.STATUS, 2).getValue()).indexOf('Pick Clear Session') > -1, true);
+    clearBody(logSheet, LOG_HEADERS.length);
     clearSession({ interactive: false });
-    check('clear allowed once logged', rowsOf(session, SESSION_HEADERS.length).length, 0);
+    check('clear logs unlogged exercises first, then clears', [rowsOf(session, SESSION_HEADERS.length).length, rowsOf(logSheet, LOG_HEADERS.length).length], [0, 2]);
 
     // 7. Pass 3: Complete Week rolls the plan forward
     var weekCell = settingsSheet.getRange(SETTINGS_ROWS.WEEK, 2);

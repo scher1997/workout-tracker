@@ -25,6 +25,22 @@ function toWeight(value, fallback) {
   return n !== null && n >= 0 ? n : fallback;
 }
 
+/** Log where the time goes: t = stageTimer("completeWeek"); t.mark("read"); ... t.done(). Output is in Extensions > Apps Script > Executions. */
+function stageTimer(name) {
+  var start = Date.now(), last = start, parts = [];
+  return {
+    mark: function (stage) { var now = Date.now(); parts.push(stage + " " + (now - last) + "ms"); last = now; },
+    done: function () { Logger.log(name + " total " + (Date.now() - start) + "ms: " + parts.join(", ")); }
+  };
+}
+
+/** Run fn with summary refreshes held off (the caller refreshes once at the end). */
+function withSummaryPaused(fn) {
+  var was = SUMMARY_STATE.paused;
+  SUMMARY_STATE.paused = true;
+  try { return fn(); } finally { SUMMARY_STATE.paused = was; }
+}
+
 function round2(x) { return Math.round(x * 100) / 100; }
 
 /** Positive integer from a cell, else the fallback. */

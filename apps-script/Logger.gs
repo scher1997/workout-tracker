@@ -1,7 +1,7 @@
 /**
  * Logger.gs — appends completed Session exercises to the Log tab.
  * planLogRows() is pure (no SpreadsheetApp) so it runs under Node tests.
- * completeSession() is the sheet-facing wrapper (menu item + phone checkbox).
+ * completeSession() is the sheet-facing wrapper (called by Complete Week, Start New Mesocycle, Clear/Build on the phone; no user action of its own).
  */
 
 /** Identity of one logged exercise: same week + day + exercise = same entry. */

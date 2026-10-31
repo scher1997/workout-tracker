@@ -108,7 +108,8 @@ function planSessionRows(programRows, lookup, settings, overrides) {
 /** Read the Settings tab into the shape planSessionRows expects. */
 function readSettings(ss) {
   var sh = ss.getSheetByName(TABS.SETTINGS);
-  var val = function (row) { return sh.getRange(row, 2).getValue(); };
+  var col = sh.getRange(1, 2, SETTINGS_SECTIONS[SETTINGS_SECTIONS.length - 1].last, 1).getValues();   // one read, not one per setting
+  var val = function (row) { return col[row - 1][0]; };
   var repMin = toPosInt(val(SETTINGS_ROWS.REP_MIN), DEFAULTS.repMin);
   var repMax = toPosInt(val(SETTINGS_ROWS.REP_MAX), DEFAULTS.repMax);
   return {
@@ -151,13 +152,14 @@ function clearSession(opts) {
   if (!session) return;
   var unlogged = countUnlogged(ss);
   if (unlogged && !interactive) {
-    setStatus(ss, 'Not cleared: ' + unlogged + ' completed exercise(s) not logged yet. Tick Complete Session first.');
-    return;
+    completeSession({ interactive: false });   // phone: log first so nothing is lost, then clear
+    unlogged = countUnlogged(ss);
+    if (unlogged) { setStatus(ss, 'Not cleared: ' + unlogged + ' completed exercise(s) could not be logged.'); return; }
   }
   if (interactive && sessionHasUserInput(session)) {
     var ui = SpreadsheetApp.getUi();
     var msg = unlogged
-      ? unlogged + ' completed exercise(s) are NOT in Log yet and will be lost. Clear anyway?\n\n(Cancel, then run Complete session first.)'
+      ? unlogged + ' completed exercise(s) are NOT in Log yet and will be lost. Clear anyway?\n\n(Cancel, then pick Complete Week to log it.)'
       : 'This deletes data entered in Session.';
     if (ui.alert('Clear Session?', msg, ui.ButtonSet.YES_NO) !== ui.Button.YES) return;
   }
@@ -207,14 +209,13 @@ function buildSession(opts) {
   if (sessionHasUserInput(session)) {
     var unlogged = countUnlogged(ss);
     if (!interactive) {
-      setStatus(ss, unlogged
-        ? 'Not rebuilt: ' + unlogged + ' completed exercise(s) not logged yet. Tick Complete Session first.'
-        : 'Not rebuilt: Session has entered data. Clear it first, or rebuild from the menu.');
+      if (unlogged) completeSession({ interactive: false });   // phone: log first so nothing is lost
+      setStatus(ss, 'Not rebuilt: Sessions has entered data. Pick Clear Session first (it logs completed exercises), or rebuild from the menu.');
       return;
     }
     var ui = SpreadsheetApp.getUi();
     var msg = unlogged
-      ? unlogged + ' completed exercise(s) are NOT in Log yet and will be lost. Rebuild anyway?\n\n(Cancel, then run Complete session first.)'
+      ? unlogged + ' completed exercise(s) are NOT in Log yet and will be lost. Rebuild anyway?\n\n(Cancel, then pick Complete Week to log it.)'
       : 'This replaces data already entered in Session.';
     if (ui.alert('Rebuild Session?', msg, ui.ButtonSet.YES_NO) !== ui.Button.YES) return;
   }

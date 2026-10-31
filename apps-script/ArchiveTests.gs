@@ -124,8 +124,8 @@ function archiveSheetTests(ss, check, h) {
   };
 
   check('archive settings: rows labelled',
-    [settings.getRange(SETTINGS_ROWS.MESO_NAME, 1).getValue(), settings.getRange(SETTINGS_ROWS.NEW_MESO_BOX, 1).getValue()],
-    [SETTINGS_LABELS.MESO_NAME, SETTINGS_LABELS.NEW_MESO_BOX]);
+    [settings.getRange(SETTINGS_ROWS.MESO_NAME, 1).getValue(), settings.getRange(SETTINGS_ROWS.ACTION, 1).getValue()],
+    [SETTINGS_LABELS.MESO_NAME, SETTINGS_LABELS.ACTION]);
 
   // A full mesocycle: 2 working weeks + the deload week
   clearBody(archive, ARCHIVE_HEADERS.length);

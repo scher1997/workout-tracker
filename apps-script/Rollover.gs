@@ -218,6 +218,7 @@ function completeWeek(opts) {
   }
   var refuse = function (msg) { setStatus(ss, msg); ss.toast(msg, 'Workout Tracker', 6); return { ok: false, message: msg }; };
 
+  var timer = stageTimer('completeWeek');
   var settings = readSettings(ss);
   var onDeload = sessionIsDeload(session);
   // Completing the last working week appends a deload week (Settings toggle); the deload week itself ends the meso.
@@ -225,7 +226,7 @@ function completeWeek(opts) {
   if (settings.week >= settings.mesoWeeks && !deloadNext) {
     return refuse(onDeload
       ? 'Week ' + settings.week + ' was the deload week, so the mesocycle is complete.'
-        + ' Tick "Start New Mesocycle" in Settings (archives the Log), or raise "Mesocycle length" to keep going.'
+        + ' Pick "Start New Mesocycle" in the Settings Action list (archives the Log), or raise "Mesocycle length" to keep going.'
       : 'Week ' + settings.week + ' is the last of ' + settings.mesoWeeks
         + '. Raise "Mesocycle length" in Settings to keep going, or turn on "Deload after last week".');
   }
@@ -249,10 +250,13 @@ function completeWeek(opts) {
     if (ui.alert('Complete week ' + settings.week + '?', msg, ui.ButtonSet.YES_NO) !== ui.Button.YES) return { ok: false, cancelled: true };
   }
 
-  if (pending) completeSession({ interactive: false });
+  timer.mark('checks');
+  if (pending) withSummaryPaused(function () { completeSession({ interactive: false }); });   // one refresh at the end
+  timer.mark('log pending');
   var mapRows = map.getLastRow() > 1 ? map.getRange(2, 1, map.getLastRow() - 1, 2).getValues() : [];
   settings.deload = deloadNext;
   var plan = planNextWeek(progRows, readLogRows(log), buildMuscleLookup(mapRows), settings);
+  timer.mark('plan');
   writeSession(session, plan.rows);
   ss.getSheetByName(TABS.SETTINGS).getRange(SETTINGS_ROWS.WEEK, 2).setValue(plan.week);
 
@@ -268,7 +272,7 @@ function completeWeek(opts) {
   if (s.stalled.length) notes.push('Stalled ' + DELOAD.stallWeeks + '+ weeks: ' + s.stalled.join(', ') + '.');
   if (s.deloadAdvice && s.deloadAdvice.recommended) {
     notes.push('Deload recommended (' + s.deloadAdvice.stalled + ' of ' + s.deloadAdvice.logged
-      + ' exercises stalled). Tick "Deload this week" in Settings to convert this week.');
+      + ' exercises stalled). Pick "Deload this week" in the Settings Action list to convert this week.');
   }
   if (s.carry.length) notes.push('Not logged this week, repeated: ' + s.carry.join(', ') + '.');
   if (s.fresh.length) notes.push('No log history, Program start weight: ' + s.fresh.join(', ') + '.');
@@ -276,6 +280,9 @@ function completeWeek(opts) {
   notes = notes.concat(plan.warnings);
   setStatus(ss, notes.join(' '));
   ss.toast(notes[0], 'Workout Tracker', 5);
+  timer.mark('write session + status');
   refreshSummarySafe(ss);
+  timer.mark('summary + chart');
+  timer.done();
   return { ok: true, week: plan.week, summary: s };
 }

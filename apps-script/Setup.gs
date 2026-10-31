@@ -7,7 +7,6 @@ function onOpen() {
   SpreadsheetApp.getUi().createMenu('Workout')
     .addItem('Set up workbook', 'setupWorkbook')
     .addItem('Build session', 'buildSession')
-    .addItem('Complete session (log it)', 'completeSession')
     .addItem('Clear session', 'clearSession')
     .addSeparator()
     .addItem('Complete week (roll to next week)', 'completeWeek')
@@ -25,6 +24,7 @@ function setupWorkbook() {
   var ss = SpreadsheetApp.getActive();
   Logger.log('setupWorkbook target: "' + ss.getName() + '" id=' + ss.getId() + ' url=' + ss.getUrl()
     + ' tabs before=' + ss.getSheets().map(function (s) { return s.getName(); }).join(','));
+  renameLegacySessionTab(ss);
   var fresh = {};
   Object.keys(TABS).forEach(function (k) {
     var name = TABS[k];
@@ -48,6 +48,7 @@ function setupWorkbook() {
   if (fresh[TABS.MAP]) {
     ss.getSheetByName(TABS.MAP).getRange(2, 1, SEED_EXERCISE_MAP.length, 2).setValues(SEED_EXERCISE_MAP);
   }
+  seedProgramFromMap(ss);
   setupProgramValidation(ss);
   setupSessionValidation(ss);
   setupSessionProtection(ss);
@@ -68,6 +69,12 @@ function setupWorkbook() {
   ss.toast('Workbook ready: ' + ss.getSheets().length + ' tabs in "' + ss.getName() + '"', 'Workout Tracker', 6);
 }
 
+/** The Session tab became Sessions: rename the old one in place so its data stays. */
+function renameLegacySessionTab(ss) {
+  var old = ss.getSheetByName('Session');
+  if (old && !ss.getSheetByName(TABS.SESSION)) old.setName(TABS.SESSION);
+}
+
 function setupHeaderTab(ss, name, headers) {
   var sh = ss.getSheetByName(name);
   sh.getRange(1, 1, 1, headers.length).setValues([headers]).setFontWeight('bold').setBackground('#e8eaed');
@@ -78,6 +85,32 @@ function listRule(values) {
   return SpreadsheetApp.newDataValidation().requireValueInList(values, true).setAllowInvalid(false).build();
 }
 
+/** Number rule: the phone shows the number pad for cells that only take numbers. Rejects text. */
+function numberRule(min, max) {
+  var b = SpreadsheetApp.newDataValidation().requireNumberBetween(min, max).setAllowInvalid(false)
+    .setHelpText('Numbers only (' + min + ' to ' + max + ')');
+  return b.build();
+}
+
+/** Pure: Program rows (Day, Exercise, Sets, Start Weight, Rep Min, Rep Max) from Exercise Map rows, split evenly over days. */
+function planSeedProgram(mapRows, days, sets) {
+  var names = mapRows.map(function (r) { return cleanName(r[0]); }).filter(function (n) { return n; });
+  var perDay = Math.ceil(names.length / days.length);
+  return names.map(function (n, i) {
+    return [days[Math.min(Math.floor(i / perDay), days.length - 1)], n, sets, '', '', ''];
+  });
+}
+
+/** Empty Program -> starter plan from the Exercise Map, so Build Session works straight away. Never touches existing rows. */
+function seedProgramFromMap(ss) {
+  var program = ss.getSheetByName(TABS.PROGRAM);
+  var map = ss.getSheetByName(TABS.MAP);
+  if (program.getLastRow() > 1) return;
+  var mapRows = map.getLastRow() > 1 ? map.getRange(2, 1, map.getLastRow() - 1, 1).getValues() : [];
+  var rows = planSeedProgram(mapRows, SEED_PROGRAM.days, SEED_PROGRAM.sets);
+  if (rows.length) program.getRange(2, 1, rows.length, PROGRAM_HEADERS.length).setValues(rows);
+}
+
 function setupProgramValidation(ss) {
   var program = ss.getSheetByName(TABS.PROGRAM);
   var map = ss.getSheetByName(TABS.MAP);
@@ -85,6 +118,10 @@ function setupProgramValidation(ss) {
   var rule = SpreadsheetApp.newDataValidation()
     .requireValueInRange(map.getRange('A2:A1000'), true).setAllowInvalid(true).build();
   program.getRange('B2:B1000').setDataValidation(rule);
+  // Numeric Program columns: Sets, Start Weight, Rep Min, Rep Max (number pad on the phone).
+  program.getRange('C2:C1000').setDataValidation(numberRule(1, 20));
+  program.getRange('D2:D1000').setDataValidation(numberRule(0, 2000));
+  program.getRange('E2:F1000').setDataValidation(numberRule(1, 100));
 }
 
 function setupSessionValidation(ss) {
@@ -98,6 +135,13 @@ function setupSessionValidation(ss) {
   apply(SESSION_COLS.PUMP, OPTIONS.pump);
   apply(SESSION_COLS.TENDON, OPTIONS.tendon);
   apply(SESSION_COLS.CONNECTION, OPTIONS.connection);
+  // Number-only entry cells: weight, rep target, reps per set, actual RIR.
+  var applyRule = function (col, rule) { sh.getRange(2, col, 200, 1).setDataValidation(rule); };
+  applyRule(SESSION_COLS.REC_WEIGHT, numberRule(0, 2000));
+  applyRule(SESSION_COLS.ACTUAL_WEIGHT, numberRule(0, 2000));
+  applyRule(SESSION_COLS.REP_TARGET, numberRule(0, 100));
+  applyRule(SESSION_COLS.ACTUAL_RIR, numberRule(0, 10));
+  SESSION_REP_COLS.forEach(function (c) { applyRule(c, numberRule(0, 100)); });
 }
 
 /** Warning-only protection: script-managed columns prompt before an edit but never lock out the owner. */
@@ -168,27 +212,24 @@ function onSettingsEdit(e) {
     refreshSummarySafe(r.getSheet().getParent());
     return;
   }
-  if (r.getColumn() !== 2 || r.getValue() !== true) return;
-  if (r.getRow() === SETTINGS_ROWS.BUILD_BOX) {
-    r.setValue(false);
-    buildSession({ interactive: false });
-  } else if (r.getRow() === SETTINGS_ROWS.CLEAR_BOX) {
-    r.setValue(false);
-    clearSession({ interactive: false });
-  } else if (r.getRow() === SETTINGS_ROWS.COMPLETE_BOX) {
-    r.setValue(false);
-    completeSession({ interactive: false });
-  } else if (r.getRow() === SETTINGS_ROWS.WEEK_BOX) {
-    r.setValue(false);
-    completeWeek({ interactive: false });
-  } else if (r.getRow() === SETTINGS_ROWS.DELOAD_BOX) {
-    r.setValue(false);
-    makeDeloadWeek();
-  } else if (r.getRow() === SETTINGS_ROWS.NEW_MESO_BOX) {
-    r.setValue(false);
-    startNewMesocycle({ interactive: false });
-  } else if (r.getRow() === SETTINGS_ROWS.SUMMARY_BOX) {
-    r.setValue(false);
-    refreshSummaryNow();
-  }
+  if (r.getColumn() !== 2 || r.getRow() !== SETTINGS_ROWS.ACTION) return;
+  runSettingsAction(r);
+}
+
+/** Reset the Action cell first (so the phone shows it done), say it started, then run the picked action. */
+function runSettingsAction(r) {
+  var A = SETTINGS_ACTIONS;
+  var picked = String(r.getValue());
+  if (picked === A.NONE || picked === '') return;
+  r.setValue(A.NONE);
+  var ss = r.getSheet().getParent();
+  setStatus(ss, 'Working: ' + picked + ' ...');
+  SpreadsheetApp.flush();
+  if (picked === A.BUILD) buildSession({ interactive: false });
+  else if (picked === A.CLEAR) clearSession({ interactive: false });
+  else if (picked === A.WEEK) completeWeek({ interactive: false });
+  else if (picked === A.DELOAD) makeDeloadWeek();
+  else if (picked === A.NEW_MESO) startNewMesocycle({ interactive: false });
+  else if (picked === A.SUMMARY) refreshSummaryNow();
+  else setStatus(ss, 'Unknown action: ' + picked);
 }

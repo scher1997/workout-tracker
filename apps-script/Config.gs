@@ -7,7 +7,7 @@ var TABS = {
   SETTINGS: 'Settings',
   PROGRAM: 'Program',
   MAP: 'Exercise Map',
-  SESSION: 'Session',
+  SESSION: 'Sessions',
   LOG: 'Log',
   ARCHIVE: 'Archive',
   SUMMARY: 'Muscle Summary',
@@ -54,32 +54,40 @@ var ARCHIVE_WEEK_TYPES = { working: 'Working', deload: 'Deload' };
 // Settings tab (SettingsLayout.gs): label in column A, value in column B, three sections.
 // To move a setting, change its row here; the code only ever uses these names.
 var SETTINGS_ROWS = {
-  // Actions: tick to run (boxes untick themselves), plus where you are and what happened
-  WEEK: 2, STATUS: 3, BUILD_BOX: 4, COMPLETE_BOX: 5, WEEK_BOX: 6, CLEAR_BOX: 7, DELOAD_BOX: 8, SUMMARY_BOX: 9, NEW_MESO_BOX: 10,
+  // Actions: where you are, what happened, and one dropdown that runs an action
+  WEEK: 2, STATUS: 3, ACTION: 4,
   // Program setup: set once per mesocycle
-  MESO_NAME: 13, MESO_WEEKS: 14, RIR_LADDER: 15, REP_MIN: 16, REP_MAX: 17,
+  MESO_NAME: 7, MESO_WEEKS: 8, RIR_LADDER: 9, REP_MIN: 10, REP_MAX: 11,
   // Preferences: persistent options
-  DELOAD_AT_END: 20, INCL_SECONDARY: 21, INCL_TERTIARY: 22, SECONDARY_WEIGHT: 23, TERTIARY_WEIGHT: 24
+  DELOAD_AT_END: 14, INCL_SECONDARY: 15, INCL_TERTIARY: 16, SECONDARY_WEIGHT: 17, TERTIARY_WEIGHT: 18
 };
 // Section title rows (first row) and the last row of each table.
 var SETTINGS_SECTIONS = [
-  { row: 1, last: 10, title: 'ACTIONS', hint: 'Tick a box to run it' },
-  { row: 12, last: 17, title: 'PROGRAM SETUP', hint: 'Set once per mesocycle' },
-  { row: 19, last: 24, title: 'PREFERENCES', hint: 'Change any time' }
+  { row: 1, last: 4, title: 'ACTIONS', hint: 'Pick an action to run it' },
+  { row: 6, last: 11, title: 'PROGRAM SETUP', hint: 'Set once per mesocycle' },
+  { row: 13, last: 18, title: 'PREFERENCES', hint: 'Change any time' }
 ];
 var SETTINGS_LABELS = {
-  WEEK: 'Current week', STATUS: 'Status', BUILD_BOX: 'Build Session', COMPLETE_BOX: 'Complete Session',
-  WEEK_BOX: 'Complete Week', CLEAR_BOX: 'Clear Session', DELOAD_BOX: 'Deload this week',
-  SUMMARY_BOX: 'Refresh Muscle Summary', NEW_MESO_BOX: 'Start New Mesocycle',
+  WEEK: 'Current week', STATUS: 'Status', ACTION: 'Action',
   MESO_NAME: 'Mesocycle name', MESO_WEEKS: 'Mesocycle length (weeks)', RIR_LADDER: 'Target RIR by week',
   REP_MIN: 'Default rep min', REP_MAX: 'Default rep max',
   DELOAD_AT_END: 'Deload after last week', INCL_SECONDARY: 'Count secondary muscles',
   INCL_TERTIARY: 'Count tertiary muscles', SECONDARY_WEIGHT: 'Secondary credit per set', TERTIARY_WEIGHT: 'Tertiary credit per set'
 };
-// Row of each persistent value in the pre-Pass-8 layout; setup moves them to SETTINGS_ROWS once.
+// Entries of the Settings > Action dropdown. The cell goes back to NONE as soon as an action starts.
+var SETTINGS_ACTIONS = {
+  NONE: 'Choose action', BUILD: 'Build Session', WEEK: 'Complete Week', CLEAR: 'Clear Session',
+  DELOAD: 'Deload this week', SUMMARY: 'Refresh Muscle Summary', NEW_MESO: 'Start New Mesocycle'
+};
+// Row of each persistent value in older layouts; setup moves them to SETTINGS_ROWS once.
+// Pre-Pass-8: one list with header "Setting". Pass 8: three tables with a checkbox per action.
 var LEGACY_SETTINGS_ROWS = {
   WEEK: 2, MESO_WEEKS: 3, RIR_LADDER: 4, REP_MIN: 5, REP_MAX: 6, DELOAD_AT_END: 12, MESO_NAME: 14,
   INCL_SECONDARY: 16, INCL_TERTIARY: 17, SECONDARY_WEIGHT: 18, TERTIARY_WEIGHT: 19
+};
+var PASS8_SETTINGS_ROWS = {
+  WEEK: 2, MESO_NAME: 13, MESO_WEEKS: 14, RIR_LADDER: 15, REP_MIN: 16, REP_MAX: 17,
+  DELOAD_AT_END: 20, INCL_SECONDARY: 21, INCL_TERTIARY: 22, SECONDARY_WEIGHT: 23, TERTIARY_WEIGHT: 24
 };
 
 // Rollover rules (Rollover.gs). "Reps" for an exercise = average over the sets entered, rounded.
@@ -162,6 +170,10 @@ var TRENDS_LAYOUT = {
   ITEM_ROW: 1, METRIC_ROW: 2, NOTE_ROW: 3, VALUE_COL: 2, CHART_ROW: 5,
   DATA_COL: 10, ITEMS_COL: 13
 };
+
+// Starter Program written by Set up workbook only when Program has no exercises: the Exercise Map rows, in map order,
+// split evenly across these days. Start Weight and rep range stay blank (Settings defaults apply). Edit the Program tab, not this.
+var SEED_PROGRAM = { days: ['Mon', 'Wed', 'Fri'], sets: 3 };
 
 // Starter rows written to a brand-new Exercise Map tab only. Edit the tab, not this.
 var SEED_EXERCISE_MAP = [

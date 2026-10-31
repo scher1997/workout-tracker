@@ -15,12 +15,20 @@ function settingsSeed() {
   };
 }
 
-/** Values from the old layout (header "Setting" in A1) keyed like SETTINGS_ROWS, or null if not on the old layout. */
+/**
+ * Values from an older Settings layout keyed like SETTINGS_ROWS, or null if the sheet is not on one.
+ * Old single list: A1 = "Setting". Pass 8 tables: A1 = "ACTIONS" and a checkbox row labelled "Build Session" in A4.
+ */
 function readLegacySettings(sh) {
-  if (sh.getLastRow() < 1 || String(sh.getRange(1, 1).getValue()) !== 'Setting') return null;
+  if (sh.getLastRow() < 1) return null;
+  var a1 = String(sh.getRange(1, 1).getValue());
+  var rows = null;
+  if (a1 === 'Setting') rows = LEGACY_SETTINGS_ROWS;
+  else if (a1 === 'ACTIONS' && String(sh.getRange(4, 1).getValue()) === 'Build Session') rows = PASS8_SETTINGS_ROWS;
+  if (!rows) return null;
   var out = {};
-  Object.keys(LEGACY_SETTINGS_ROWS).forEach(function (k) {
-    var v = sh.getRange(LEGACY_SETTINGS_ROWS[k], 2).getValue();
+  Object.keys(rows).forEach(function (k) {
+    var v = sh.getRange(rows[k], 2).getValue();
     if (v !== '') out[k] = v;
   });
   return out;
@@ -43,9 +51,16 @@ function setupSettings(ss, isNew) {
   SETTINGS_SECTIONS.forEach(function (s) { sh.getRange(s.row, 1, 1, 2).setValues([[s.title, s.hint]]); });
   Object.keys(SETTINGS_LABELS).forEach(function (k) { sh.getRange(SETTINGS_ROWS[k], 1).setValue(SETTINGS_LABELS[k]); });
 
-  // Action boxes untick themselves (onSettingsEdit); the persistent toggles below never do.
-  ['BUILD_BOX', 'COMPLETE_BOX', 'WEEK_BOX', 'CLEAR_BOX', 'DELOAD_BOX', 'SUMMARY_BOX', 'NEW_MESO_BOX'].forEach(function (k) {
-    sh.getRange(SETTINGS_ROWS[k], 2).insertCheckboxes();
+  // One Action dropdown: pick an entry to run it; onSettingsEdit puts it back to "Choose action".
+  var actionCell = sh.getRange(SETTINGS_ROWS.ACTION, 2);
+  var actionValues = Object.keys(SETTINGS_ACTIONS).map(function (k) { return SETTINGS_ACTIONS[k]; });
+  actionCell.setDataValidation(listRule(actionValues)).setValue(SETTINGS_ACTIONS.NONE);
+  // Number-only cells get a number rule so the phone shows the number pad.
+  ['MESO_WEEKS', 'REP_MIN', 'REP_MAX'].forEach(function (k) {
+    sh.getRange(SETTINGS_ROWS[k], 2).setDataValidation(numberRule(1, 100));
+  });
+  ['SECONDARY_WEIGHT', 'TERTIARY_WEIGHT'].forEach(function (k) {
+    sh.getRange(SETTINGS_ROWS[k], 2).setDataValidation(numberRule(0, 1));
   });
   var atEnd = sh.getRange(SETTINGS_ROWS.DELOAD_AT_END, 2);
   var atEndWas = atEnd.getValue();

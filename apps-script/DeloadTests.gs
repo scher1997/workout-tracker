@@ -139,8 +139,8 @@ function deloadSheetTests(ss, check, h) {
   };
 
   check('deload settings: rows labelled',
-    [settings.getRange(SETTINGS_ROWS.DELOAD_AT_END, 1).getValue(), settings.getRange(SETTINGS_ROWS.DELOAD_BOX, 1).getValue()],
-    [SETTINGS_LABELS.DELOAD_AT_END, SETTINGS_LABELS.DELOAD_BOX]);
+    [settings.getRange(SETTINGS_ROWS.DELOAD_AT_END, 1).getValue(), settings.getRange(SETTINGS_ROWS.ACTION, 1).getValue()],
+    [SETTINGS_LABELS.DELOAD_AT_END, SETTINGS_LABELS.ACTION]);
 
   // Completing the last working week appends a deload week; the deload week ends the mesocycle
   settings.getRange(SETTINGS_ROWS.DELOAD_AT_END, 2).setValue(true);

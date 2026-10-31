@@ -145,6 +145,12 @@ function runPureTests() {
   // Header / column constants stay in sync
   check('header count matches cols', SESSION_HEADERS.length, Object.keys(SESSION_COLS).length);
   check('col index matches header', SESSION_HEADERS[SESSION_COLS.PUMP - 1], 'Pump');
+  // Starter Program from the Exercise Map
+  var seeded = planSeedProgram([['A'], ['B'], ['C'], ['D'], ['E'], ['']], ['Mon', 'Wed', 'Fri'], 3);
+  check('seed program: map order, days split evenly, blanks skipped',
+    seeded.map(function (r) { return r[0] + ':' + r[1]; }), ['Mon:A', 'Mon:B', 'Wed:C', 'Wed:D', 'Fri:E']);
+  check('seed program: sets set, weight and reps blank', seeded[0].slice(2), [3, '', '', '']);
+  check('seed program: empty map -> no rows', planSeedProgram([], ['Mon'], 3), []);
   // Settings tab layout: three tables, every setting in the right one, nothing overlapping
   var rowOf = function (keys) { return keys.map(function (k) { return SETTINGS_ROWS[k]; }); };
   var inSection = function (i, keys) {
@@ -157,8 +163,11 @@ function runPureTests() {
   check('settings: every row unique and not a title row',
     [allRows.length, allRows.filter(function (r, i) { return allRows.indexOf(r) !== i; }).length,
       allRows.filter(function (r) { return SETTINGS_SECTIONS.some(function (s) { return s.row === r; }); }).length], [Object.keys(SETTINGS_ROWS).length, 0, 0]);
-  check('settings: action boxes (and week/status) are in Actions',
-    inSection(0, ['WEEK', 'STATUS', 'BUILD_BOX', 'COMPLETE_BOX', 'WEEK_BOX', 'CLEAR_BOX', 'DELOAD_BOX', 'SUMMARY_BOX', 'NEW_MESO_BOX']), true);
+  check('settings: week, status and the Action dropdown are in Actions',
+    inSection(0, ['WEEK', 'STATUS', 'ACTION']), true);
+  var actionNames = Object.keys(SETTINGS_ACTIONS).map(function (k) { return SETTINGS_ACTIONS[k]; });
+  check('settings: action names are unique and include the neutral one',
+    [actionNames.length, actionNames.filter(function (n, i) { return actionNames.indexOf(n) !== i; }).length, actionNames.indexOf(SETTINGS_ACTIONS.NONE) >= 0], [7, 0, true]);
   check('settings: one-time program setup is in Program setup',
     inSection(1, ['MESO_NAME', 'MESO_WEEKS', 'RIR_LADDER', 'REP_MIN', 'REP_MAX']), true);
   check('settings: misc options are in Preferences',
@@ -169,7 +178,7 @@ function runPureTests() {
     [SETTINGS_ROWS.INCL_TERTIARY - SETTINGS_ROWS.INCL_SECONDARY, SETTINGS_ROWS.SECONDARY_WEIGHT - SETTINGS_ROWS.INCL_TERTIARY,
       SETTINGS_ROWS.TERTIARY_WEIGHT - SETTINGS_ROWS.SECONDARY_WEIGHT], [1, 1, 1]);
   check('settings: migration only moves keys the new layout has',
-    Object.keys(LEGACY_SETTINGS_ROWS).filter(function (k) { return SETTINGS_ROWS[k] === undefined; }), []);
+    Object.keys(LEGACY_SETTINGS_ROWS).concat(Object.keys(PASS8_SETTINGS_ROWS)).filter(function (k) { return SETTINGS_ROWS[k] === undefined; }), []);
   return results.concat(runFeedbackTests(), runDeloadTests(), runArchiveTests(), runMuscleSummaryTests());
 }
 

@@ -193,9 +193,14 @@ function refreshMuscleSummary(ss, data) {
 
 /** Rebuild the Muscle Summary tab and the Trends dashboard from one read. */
 function refreshAllSummaries(ss) {
+  var timer = stageTimer('refreshAllSummaries');
   var data = readSummaryData(ss);
+  timer.mark('read');
   var plan = refreshMuscleSummary(ss, data);
+  timer.mark('summary grid');
   refreshTrends(ss, data);
+  timer.mark('trends + chart');
+  timer.done();
   return plan;
 }
 
