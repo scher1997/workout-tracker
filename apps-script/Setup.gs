@@ -74,61 +74,6 @@ function setupHeaderTab(ss, name, headers) {
   sh.setFrozenRows(1);
 }
 
-function setupSettings(ss, isNew) {
-  var sh = ss.getSheetByName(TABS.SETTINGS);
-  var labels = {};
-  labels[SETTINGS_ROWS.WEEK] = 'Current week';
-  labels[SETTINGS_ROWS.MESO_WEEKS] = 'Mesocycle length (weeks)';
-  labels[SETTINGS_ROWS.RIR_LADDER] = 'Target RIR by week (comma list)';
-  labels[SETTINGS_ROWS.REP_MIN] = 'Default rep min';
-  labels[SETTINGS_ROWS.REP_MAX] = 'Default rep max';
-  labels[SETTINGS_ROWS.BUILD_BOX] = 'Build Session (tick)';
-  labels[SETTINGS_ROWS.STATUS] = 'Status';
-  labels[SETTINGS_ROWS.CLEAR_BOX] = 'Clear Session (tick)';
-  labels[SETTINGS_ROWS.COMPLETE_BOX] = 'Complete Session (tick)';
-  labels[SETTINGS_ROWS.WEEK_BOX] = 'Complete Week (tick)';
-  labels[SETTINGS_ROWS.DELOAD_AT_END] = 'Deload after last week (on/off)';
-  labels[SETTINGS_ROWS.DELOAD_BOX] = 'Deload this week (tick)';
-  labels[SETTINGS_ROWS.MESO_NAME] = 'Mesocycle name (Archive label)';
-  labels[SETTINGS_ROWS.NEW_MESO_BOX] = 'Start New Mesocycle (tick)';
-  labels[SETTINGS_ROWS.INCL_SECONDARY] = 'Summary: count secondary muscles';
-  labels[SETTINGS_ROWS.INCL_TERTIARY] = 'Summary: count tertiary muscles';
-  labels[SETTINGS_ROWS.SECONDARY_WEIGHT] = 'Secondary muscle credit per set';
-  labels[SETTINGS_ROWS.TERTIARY_WEIGHT] = 'Tertiary muscle credit per set';
-  labels[SETTINGS_ROWS.SUMMARY_BOX] = 'Refresh Muscle Summary (tick)';
-  sh.getRange(1, 1, 1, 2).setValues([['Setting', 'Value']]).setFontWeight('bold').setBackground('#e8eaed');
-  Object.keys(labels).forEach(function (r) { sh.getRange(Number(r), 1).setValue(labels[r]); });
-  if (isNew) {
-    sh.getRange(SETTINGS_ROWS.WEEK, 2).setValue(DEFAULTS.week);
-    sh.getRange(SETTINGS_ROWS.MESO_WEEKS, 2).setValue(DEFAULTS.mesoWeeks);
-    sh.getRange(SETTINGS_ROWS.RIR_LADDER, 2).setNumberFormat('@').setValue(DEFAULTS.rirLadder.join(','));
-    sh.getRange(SETTINGS_ROWS.REP_MIN, 2).setValue(DEFAULTS.repMin);
-    sh.getRange(SETTINGS_ROWS.REP_MAX, 2).setValue(DEFAULTS.repMax);
-  }
-  sh.getRange(SETTINGS_ROWS.BUILD_BOX, 2).insertCheckboxes();
-  sh.getRange(SETTINGS_ROWS.CLEAR_BOX, 2).insertCheckboxes();
-  sh.getRange(SETTINGS_ROWS.COMPLETE_BOX, 2).insertCheckboxes();
-  sh.getRange(SETTINGS_ROWS.WEEK_BOX, 2).insertCheckboxes();
-  var atEnd = sh.getRange(SETTINGS_ROWS.DELOAD_AT_END, 2);
-  var atEndWas = atEnd.getValue();
-  atEnd.insertCheckboxes();
-  if (atEndWas === '') atEnd.setValue(true);   // a persistent setting, on by default; never reset by onSettingsEdit
-  sh.getRange(SETTINGS_ROWS.DELOAD_BOX, 2).insertCheckboxes();
-  var mesoName = sh.getRange(SETTINGS_ROWS.MESO_NAME, 2);
-  if (cleanName(mesoName.getValue()) === '') mesoName.setNumberFormat('@').setValue('Meso 1');
-  sh.getRange(SETTINGS_ROWS.NEW_MESO_BOX, 2).insertCheckboxes();
-  // Persistent summary options (like the deload toggle, never reset by onSettingsEdit).
-  sh.getRange(SETTINGS_ROWS.INCL_SECONDARY, 2).insertCheckboxes();
-  sh.getRange(SETTINGS_ROWS.INCL_TERTIARY, 2).insertCheckboxes();
-  var secW = sh.getRange(SETTINGS_ROWS.SECONDARY_WEIGHT, 2);
-  if (secW.getValue() === '') secW.setValue(SUMMARY.secondaryWeight);
-  var terW = sh.getRange(SETTINGS_ROWS.TERTIARY_WEIGHT, 2);
-  if (terW.getValue() === '') terW.setValue(SUMMARY.tertiaryWeight);
-  sh.getRange(SETTINGS_ROWS.SUMMARY_BOX, 2).insertCheckboxes();
-  sh.setColumnWidth(1, 230);
-  sh.setColumnWidth(2, 360);
-}
-
 function listRule(values) {
   return SpreadsheetApp.newDataValidation().requireValueInList(values, true).setAllowInvalid(false).build();
 }

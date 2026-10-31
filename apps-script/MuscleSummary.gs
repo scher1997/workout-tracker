@@ -134,8 +134,7 @@ function countingCaption(opts) {
   var parts = ['primary'];
   if (opts.includeSecondary) parts.push('secondary x' + toWeight(opts.secondaryWeight, SUMMARY.secondaryWeight));
   if (opts.includeTertiary) parts.push('tertiary x' + toWeight(opts.tertiaryWeight, SUMMARY.tertiaryWeight));
-  return 'Sets done per week. Counting: ' + parts.join(' + ') + '. Change in Settings rows '
-    + SETTINGS_ROWS.INCL_SECONDARY + '-' + SETTINGS_ROWS.TERTIARY_WEIGHT + '.';
+  return 'Sets done per week. Counting: ' + parts.join(' + ') + '. Change in Settings > Preferences.';
 }
 
 // ---------------------------------------------------------------- Sheet side

@@ -15,8 +15,16 @@ Bound Google Sheets script. Program tab is the source of truth; `buildSession()`
 | `Archive.gs` | Archive transform, start weights, `startNewMesocycle()` |
 | `MuscleSummary.gs` | Muscle Summary pivot: roles from Exercise Map, `planMuscleSummary()` (pure), `refreshSummarySafe()` |
 | `Trends.gs` | Trends dashboard: item/metric series (pure), chart, dropdown edit hook |
+| `SettingsLayout.gs` | Settings tab layout: three tables, one-time move from the old single list |
 | `Utils.gs` | Name/number helpers |
 | `Tests.gs` | `runPureTests()`, `runAllTests()` |
+
+## Settings tab (Pass 8; layout in `SETTINGS_ROWS` / `SETTINGS_SECTIONS`, Config.gs; code in `SettingsLayout.gs`)
+Three tables, two columns (label, value), sized for a phone:
+- **ACTIONS**: Current week, Status, then tick boxes: Build Session, Complete Session, Complete Week, Clear Session, Deload this week, Refresh Muscle Summary, Start New Mesocycle. Boxes untick themselves.
+- **PROGRAM SETUP** (once per mesocycle): Mesocycle name, Mesocycle length, Target RIR by week, Default rep min / max.
+- **PREFERENCES**: Deload after last week, Count secondary / tertiary muscles, and their credit per set.
+Move a setting by changing its row in `SETTINGS_ROWS`; code only uses the names. Running **Set up workbook** on a Sheet with the old single-list Settings carries your values over to the new layout once (action boxes and Status start fresh).
 
 ## Local tests
 ```
@@ -71,24 +79,24 @@ A deload week = half the Program sets (rounded up, min 1), weight held, reps = l
 - **Deload this week**: **Workout > Make this week a deload**, or tick **Deload this week** on Settings. Rewrites the current, not-yet-started Session as a deload from Log history up to last week. Refuses if Session has entries or is already a deload.
 - **End of mesocycle**: with Settings > **Deload after last week** on (default), Complete Week on the last working week builds the next week as a deload (week N+1). Completing that deload week is refused (mesocycle complete: use Start New Mesocycle, see below). Off = the old refusal.
 - After a deload, progression resumes from the last working week (normal +1 rep at the same weight), not from the deload week's numbers. Soreness on a deload row eases from the deload RIR.
-- Existing Sheet: run **Set up workbook** once to add the two Settings rows (rows 12 and 13).
+- Existing Sheet: run **Set up workbook** once to add the Deload settings.
 
 ## Archive and new mesocycle (Pass 6; code in `Archive.gs`, columns in `ARCHIVE_HEADERS`, Config.gs)
 The **Archive** tab is a chart-ready, long-term view across mesocycles: one row per exercise per day per week. Columns: Mesocycle, Meso Week, Overall Week, Date, Week Type, Day, Exercise, Muscle Group, Sets Done, Weight, Avg Reps, Volume, Target RIR, Actual RIR, Soreness, Pump, Tendon, Connection, Flags.
 - **Overall Week** keeps counting across mesocycles (meso week + the Archive's highest Overall Week), so it works as a time axis. **Date** is the week's earliest logged date. **Week Type** is Working or Deload.
 - **Volume** = weight x total reps entered; **Avg Reps** is to one decimal; **Sets Done** counts S1-S5 entries. Notes and the raw S1-S5 reps stay out of Archive. A re-logged exercise keeps its latest row.
 - **Start new mesocycle**: **Workout > Start new mesocycle (archive + reset)**, or tick **Start New Mesocycle** on Settings. In order: log any completed Session exercises, append to Archive and verify the row count, set Program > Start Weight to each exercise's last working-week weight (deload weeks ignored; unlogged exercises keep theirs), clear Session and Log, advance **Mesocycle name** ("Meso 1" -> "Meso 2"), set Current week to 1 and build the week-1 Session. Log is only cleared after the Archive copy checks out.
-- **Mesocycle name** (Settings row 14) is the Archive label. Archive refuses a label it already holds, so a double tick cannot duplicate rows.
+- **Mesocycle name** (Settings > Program setup) is the Archive label. Archive refuses a label it already holds, so a double tick cannot duplicate rows.
 - The phone checkbox only runs when the mesocycle is finished (the deload week is the current week, or the last week with the deload toggle off, or past the end). The menu item can end an unfinished mesocycle early after a confirmation.
 - A pending progression bump is not applied to the start weight: it is the weight actually used in the last working week.
-- Existing Sheet: run **Set up workbook** once (adds the Archive tab and Settings rows 14 and 15; the name starts at "Meso 1").
+- Existing Sheet: run **Set up workbook** once (adds the Archive tab and the Mesocycle name and Start New Mesocycle settings; the name starts at "Meso 1").
 
 ## Muscle Summary and Trends (Pass 7; code in `MuscleSummary.gs` and `Trends.gs`, constants in `SUMMARY` / `TRENDS_LAYOUT`, Config.gs)
 - **Muscle Summary** tab (script-written, warning-protected): rows = muscle groups, columns = Overall Week, cells = sets done. Row 2 names the mesocycle ("Meso 1 · Deload" on deload weeks), last row is Total, darker green = more sets. Skipped weeks show as zero columns.
 - **Data**: Archive (past mesocycles) + the current Log, so the weeks keep counting after Start New Mesocycle. Sets = sets actually done (S1-S5 entries), same as Archive "Sets Done".
 - **Exercise Map** has three muscle columns: **Muscle Group** (primary), **Secondary Muscles**, **Tertiary Muscles** (comma lists, optional). The muscle-group rows are every name in those columns, in map order; a new group such as Adductors appears as soon as it is typed into the map (zeros until logged). Nothing is named in code.
 - The muscle of a logged exercise is looked up in the map when the summary refreshes, so adding an exercise to the map also fixes earlier `?? not in Exercise Map` rows. An exercise missing from the map keeps the muscle stored on its Log row; anything still unknown gets its own last row, so totals always add up.
-- **Secondary / tertiary counting** (Settings rows 16-19): tick *count secondary / tertiary muscles* and set the credit per set (defaults 0.5 and 0.25). Primary always counts 1. A muscle named in several roles of one exercise counts once, at the highest role that is switched on. Both boxes off = a plain primary-only hand count. A caption under the pivot says what is being counted. Total = sum of the rows, so it includes the fractional credit.
+- **Secondary / tertiary counting** (Settings > Preferences): tick *count secondary / tertiary muscles* and set the credit per set (defaults 0.5 and 0.25). Primary always counts 1. A muscle named in several roles of one exercise counts once, at the highest role that is switched on. Both boxes off = a plain primary-only hand count. A caption under the pivot says what is being counted. Total = sum of the rows, so it includes the fractional credit.
 - **Trends** tab: pick an item in B1 (*Muscle: x* or *Exercise: x*) and a metric in B2 (Sets, Volume, Top weight, Avg reps). Chart below, data block in J:K, item list in M (script-managed). Muscles only have Sets and Volume (other metrics fall back to Sets, with a note); muscle Volume follows the same secondary/tertiary options.
-- **Refresh** is automatic after Complete Session, Complete Week and Start New Mesocycle, and when you edit the Exercise Map, the Settings rows 16-19 or the Trends dropdowns (same installable onEdit trigger, no new authorization). Manual: **Workout > Refresh muscle summary + trends**, or tick **Refresh Muscle Summary** on Settings. A summary error is logged and never blocks logging.
-- Existing Sheet: run **Set up workbook** once (adds the Trends tab, Exercise Map columns C-D and Settings rows 16-20), then **Run sheet tests**.
+- **Refresh** is automatic after Complete Session, Complete Week and Start New Mesocycle, and when you edit the Exercise Map, the Settings > Preferences options or the Trends dropdowns (same installable onEdit trigger, no new authorization). Manual: **Workout > Refresh muscle summary + trends**, or tick **Refresh Muscle Summary** on Settings. A summary error is logged and never blocks logging.
+- Existing Sheet: run **Set up workbook** once (adds the Trends tab, Exercise Map columns C-D and the new Settings options), then **Run sheet tests**.

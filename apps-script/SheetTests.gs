@@ -31,6 +31,14 @@ function runSheetTests() {
     if (sh && h) check('headers: ' + TABS[k], sh.getRange(1, 1, 1, h.length).getValues()[0], h);
   });
 
+  // Settings tab: section titles and every label sit on their configured rows
+  var settingsTab = ss.getSheetByName(TABS.SETTINGS);
+  check('settings: section titles', SETTINGS_SECTIONS.map(function (s) { return settingsTab.getRange(s.row, 1).getValue(); }),
+    SETTINGS_SECTIONS.map(function (s) { return s.title; }));
+  check('settings: labels on their rows', Object.keys(SETTINGS_LABELS).filter(function (k) {
+    return settingsTab.getRange(SETTINGS_ROWS[k], 1).getValue() !== SETTINGS_LABELS[k];
+  }), []);
+
   // 2. Feedback dropdowns on Session
   var session = ss.getSheetByName(TABS.SESSION);
   var program = ss.getSheetByName(TABS.PROGRAM);

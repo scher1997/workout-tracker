@@ -145,6 +145,31 @@ function runPureTests() {
   // Header / column constants stay in sync
   check('header count matches cols', SESSION_HEADERS.length, Object.keys(SESSION_COLS).length);
   check('col index matches header', SESSION_HEADERS[SESSION_COLS.PUMP - 1], 'Pump');
+  // Settings tab layout: three tables, every setting in the right one, nothing overlapping
+  var rowOf = function (keys) { return keys.map(function (k) { return SETTINGS_ROWS[k]; }); };
+  var inSection = function (i, keys) {
+    var s = SETTINGS_SECTIONS[i];
+    return rowOf(keys).every(function (r) { return r > s.row && r <= s.last; });
+  };
+  var allRows = Object.keys(SETTINGS_ROWS).map(function (k) { return SETTINGS_ROWS[k]; });
+  check('settings: 3 sections titled Actions / Program setup / Preferences',
+    SETTINGS_SECTIONS.map(function (s) { return s.title; }), ['ACTIONS', 'PROGRAM SETUP', 'PREFERENCES']);
+  check('settings: every row unique and not a title row',
+    [allRows.length, allRows.filter(function (r, i) { return allRows.indexOf(r) !== i; }).length,
+      allRows.filter(function (r) { return SETTINGS_SECTIONS.some(function (s) { return s.row === r; }); }).length], [Object.keys(SETTINGS_ROWS).length, 0, 0]);
+  check('settings: action boxes (and week/status) are in Actions',
+    inSection(0, ['WEEK', 'STATUS', 'BUILD_BOX', 'COMPLETE_BOX', 'WEEK_BOX', 'CLEAR_BOX', 'DELOAD_BOX', 'SUMMARY_BOX', 'NEW_MESO_BOX']), true);
+  check('settings: one-time program setup is in Program setup',
+    inSection(1, ['MESO_NAME', 'MESO_WEEKS', 'RIR_LADDER', 'REP_MIN', 'REP_MAX']), true);
+  check('settings: misc options are in Preferences',
+    inSection(2, ['DELOAD_AT_END', 'INCL_SECONDARY', 'INCL_TERTIARY', 'SECONDARY_WEIGHT', 'TERTIARY_WEIGHT']), true);
+  check('settings: every row has a label and every label a row',
+    Object.keys(SETTINGS_LABELS).sort(), Object.keys(SETTINGS_ROWS).sort());
+  check('settings: secondary/tertiary options are contiguous (edit hook uses the range)',
+    [SETTINGS_ROWS.INCL_TERTIARY - SETTINGS_ROWS.INCL_SECONDARY, SETTINGS_ROWS.SECONDARY_WEIGHT - SETTINGS_ROWS.INCL_TERTIARY,
+      SETTINGS_ROWS.TERTIARY_WEIGHT - SETTINGS_ROWS.SECONDARY_WEIGHT], [1, 1, 1]);
+  check('settings: migration only moves keys the new layout has',
+    Object.keys(LEGACY_SETTINGS_ROWS).filter(function (k) { return SETTINGS_ROWS[k] === undefined; }), []);
   return results.concat(runFeedbackTests(), runDeloadTests(), runArchiveTests(), runMuscleSummaryTests());
 }
 

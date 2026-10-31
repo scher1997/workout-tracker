@@ -51,12 +51,35 @@ var ARCHIVE_HEADERS = [
 ];
 var ARCHIVE_WEEK_TYPES = { working: 'Working', deload: 'Deload' };
 
-// Settings tab: label in column A, value in column B.
+// Settings tab (SettingsLayout.gs): label in column A, value in column B, three sections.
+// To move a setting, change its row here; the code only ever uses these names.
 var SETTINGS_ROWS = {
-  WEEK: 2, MESO_WEEKS: 3, RIR_LADDER: 4, REP_MIN: 5, REP_MAX: 6, BUILD_BOX: 7, STATUS: 8, CLEAR_BOX: 9, COMPLETE_BOX: 10,
-  WEEK_BOX: 11, DELOAD_AT_END: 12, DELOAD_BOX: 13,
-  MESO_NAME: 14, NEW_MESO_BOX: 15,
-  INCL_SECONDARY: 16, INCL_TERTIARY: 17, SECONDARY_WEIGHT: 18, TERTIARY_WEIGHT: 19, SUMMARY_BOX: 20
+  // Actions: tick to run (boxes untick themselves), plus where you are and what happened
+  WEEK: 2, STATUS: 3, BUILD_BOX: 4, COMPLETE_BOX: 5, WEEK_BOX: 6, CLEAR_BOX: 7, DELOAD_BOX: 8, SUMMARY_BOX: 9, NEW_MESO_BOX: 10,
+  // Program setup: set once per mesocycle
+  MESO_NAME: 13, MESO_WEEKS: 14, RIR_LADDER: 15, REP_MIN: 16, REP_MAX: 17,
+  // Preferences: persistent options
+  DELOAD_AT_END: 20, INCL_SECONDARY: 21, INCL_TERTIARY: 22, SECONDARY_WEIGHT: 23, TERTIARY_WEIGHT: 24
+};
+// Section title rows (first row) and the last row of each table.
+var SETTINGS_SECTIONS = [
+  { row: 1, last: 10, title: 'ACTIONS', hint: 'Tick a box to run it' },
+  { row: 12, last: 17, title: 'PROGRAM SETUP', hint: 'Set once per mesocycle' },
+  { row: 19, last: 24, title: 'PREFERENCES', hint: 'Change any time' }
+];
+var SETTINGS_LABELS = {
+  WEEK: 'Current week', STATUS: 'Status', BUILD_BOX: 'Build Session', COMPLETE_BOX: 'Complete Session',
+  WEEK_BOX: 'Complete Week', CLEAR_BOX: 'Clear Session', DELOAD_BOX: 'Deload this week',
+  SUMMARY_BOX: 'Refresh Muscle Summary', NEW_MESO_BOX: 'Start New Mesocycle',
+  MESO_NAME: 'Mesocycle name', MESO_WEEKS: 'Mesocycle length (weeks)', RIR_LADDER: 'Target RIR by week',
+  REP_MIN: 'Default rep min', REP_MAX: 'Default rep max',
+  DELOAD_AT_END: 'Deload after last week', INCL_SECONDARY: 'Count secondary muscles',
+  INCL_TERTIARY: 'Count tertiary muscles', SECONDARY_WEIGHT: 'Secondary credit per set', TERTIARY_WEIGHT: 'Tertiary credit per set'
+};
+// Row of each persistent value in the pre-Pass-8 layout; setup moves them to SETTINGS_ROWS once.
+var LEGACY_SETTINGS_ROWS = {
+  WEEK: 2, MESO_WEEKS: 3, RIR_LADDER: 4, REP_MIN: 5, REP_MAX: 6, DELOAD_AT_END: 12, MESO_NAME: 14,
+  INCL_SECONDARY: 16, INCL_TERTIARY: 17, SECONDARY_WEIGHT: 18, TERTIARY_WEIGHT: 19
 };
 
 // Rollover rules (Rollover.gs). "Reps" for an exercise = average over the sets entered, rounded.
@@ -121,8 +144,8 @@ var UNKNOWN_MUSCLE = '?? not in Exercise Map';
 
 // Muscle Summary + Trends (MuscleSummary.gs, Trends.gs). Sets = sets actually done (S1-S5 reps entered).
 var SUMMARY = {
-  secondaryWeight: 0.5,    // default share of a set credited to a secondary muscle (Settings row 18 overrides)
-  tertiaryWeight: 0.25,    // same for tertiary (Settings row 19)
+  secondaryWeight: 0.5,    // default share of a set credited to a secondary muscle (Settings > Preferences overrides)
+  tertiaryWeight: 0.25,    // same for tertiary
   headerLabel: 'Muscle Group',
   mesoRowLabel: 'Mesocycle',
   totalLabel: 'Total',
