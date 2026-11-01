@@ -110,7 +110,7 @@ function runSheetTests() {
     enter(3, { S1: 12, S2: 11, S3: 10, S4: 9, ACTUAL_RIR: 1 });   // row 4 left untouched
     clearBody(logSheet, LOG_HEADERS.length);
     var first = completeSession({ interactive: false });
-    var logged = rowsOf(logSheet, LOG_HEADERS.length);
+    var logged = rowsOf(logSheet, LOG_HEADERS.length).map(logRowFromSheet);   // code rows: r[SESSION_COLS.X] indexing
     check('log: 2 of 3 exercises appended', logged.length, 2);
     check('log: result counts', [first.logged, first.notCompleted], [2, 1]);
     check('log: exercise/week/sets', logged.map(function (r) { return [r[SESSION_COLS.WEEK], r[SESSION_COLS.EXERCISE], r[SESSION_COLS.SETS]]; }),
@@ -179,6 +179,8 @@ function runSheetTests() {
     archiveSheetTests(ss, check, helpers);
     // 11. Pass 7: Muscle Summary and Trends (MuscleSummaryTests.gs)
     muscleSummarySheetTests(ss, check, helpers);
+    // 12. Pass 10A: Primary / Secondary / Tertiary columns, compound vs isolation counting (LogLayoutTests.gs)
+    logLayoutSheetTests(ss, check, helpers);
   } catch (e) {
     check('sheet tests ran without error', String(e), '');
   } finally {

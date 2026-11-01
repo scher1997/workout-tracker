@@ -38,6 +38,7 @@ function setupWorkbook() {
   setupHeaderTab(ss, TABS.MAP, MAP_HEADERS);
   setupHeaderTab(ss, TABS.SESSION, SESSION_HEADERS);
   ss.getSheetByName(TABS.SESSION).setColumnWidth(SESSION_COLS.FLAGS, 320);
+  migrateMuscleColumns(ss);   // old Log / Archive (one Muscle Group column) gain Secondary + Tertiary before headers are rewritten
   setupHeaderTab(ss, TABS.LOG, LOG_HEADERS);
   ss.getSheetByName(TABS.LOG).getRange('A2:A').setNumberFormat('yyyy-mm-dd');
   setupHeaderTab(ss, TABS.ARCHIVE, ARCHIVE_HEADERS);

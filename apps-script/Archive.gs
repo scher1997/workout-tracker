@@ -83,6 +83,8 @@ function archiveRows(logRows, label, overallOffset) {
     out[ARCHIVE_COLS.DAY - 1] = cleanName(r[SESSION_COLS.DAY]);
     out[ARCHIVE_COLS.EXERCISE - 1] = cleanName(r[SESSION_COLS.EXERCISE]);
     out[ARCHIVE_COLS.MUSCLE - 1] = cleanName(r[SESSION_COLS.MUSCLE]);
+    out[ARCHIVE_COLS.SECONDARY - 1] = cleanName(r[LOG_ROW.SECONDARY]);
+    out[ARCHIVE_COLS.TERTIARY - 1] = cleanName(r[LOG_ROW.TERTIARY]);
     out[ARCHIVE_COLS.SETS_DONE - 1] = reps.length;
     out[ARCHIVE_COLS.WEIGHT - 1] = weight === null ? '' : weight;
     out[ARCHIVE_COLS.AVG_REPS - 1] = reps.length ? round1(total / reps.length) : '';

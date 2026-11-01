@@ -79,7 +79,8 @@ function weekSpan(facts) {
  * Pivot of muscle group x Overall Week.
  * facts: historyFacts(); mapRows: Exercise Map body; opts: {includeSecondary, includeTertiary, secondaryWeight, tertiaryWeight};
  * measure: 'sets' (default) or 'volume'.
- * The muscle of a fact comes from the map (so editing the map fixes old rows), else the muscle stored on the row.
+ * The muscles of a fact come from the map (so editing the map fixes old rows), else the Primary / Secondary / Tertiary
+ * columns stored on the row (exercise no longer in the map).
  * Returns {grid, weeks, muscles (display names), rows: [{key, name, values}]}.
  * grid = header row (Muscle Group, weeks...), mesocycle row, one row per muscle, Total row.
  */
@@ -99,7 +100,11 @@ function planMuscleSummary(facts, mapRows, opts, measure) {
     var amount = parseNumber(f[col - 1]);
     if (amount === null) amount = 0;
     var role = built.roles[exercise]
-      || { primary: cleanName(f[ARCHIVE_COLS.MUSCLE - 1]) || UNKNOWN_MUSCLE, secondary: [], tertiary: [] };
+      || {
+        primary: cleanName(f[ARCHIVE_COLS.MUSCLE - 1]) || UNKNOWN_MUSCLE,
+        secondary: parseMuscleList(f[ARCHIVE_COLS.SECONDARY - 1]),
+        tertiary: parseMuscleList(f[ARCHIVE_COLS.TERTIARY - 1])
+      };
     muscleShares(role, opts).forEach(function (s) {
       if (!names[s.key]) { names[s.key] = s.name; order.push(s.key); }
       if (!cells[s.key]) cells[s.key] = {};

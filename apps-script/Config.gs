@@ -36,19 +36,29 @@ var SESSION_REP_COLS = [11, 12, 13, 14, 15];
 // Script-managed (warning-protected) columns.
 var SESSION_PROTECTED_COLS = [1, 2, 3, 4, 5, 7, 9, 22];
 
-var LOG_HEADERS = ['Date'].concat(SESSION_HEADERS);
+// Log and Archive split the muscle into three columns; Sessions keeps the single primary "Muscle Group" column.
+var MUSCLE_HEADERS = ['Primary Muscle', 'Secondary Muscles', 'Tertiary Muscles'];
+
+// Log tab as it sits on the sheet: Date, then the Session columns with Muscle Group replaced by the three muscle columns.
+var LOG_HEADERS = ['Date'].concat(
+  SESSION_HEADERS.slice(0, SESSION_COLS.MUSCLE - 1), MUSCLE_HEADERS, SESSION_HEADERS.slice(SESSION_COLS.MUSCLE));
+// In code a Log row is [Date, ...Session columns, Secondary, Tertiary] so r[SESSION_COLS.X] keeps working;
+// LogLayout.gs converts to and from the sheet layout. These are the 0-based indexes of the two extra cells.
+var LOG_ROW = { SECONDARY: SESSION_HEADERS.length + 1, TERTIARY: SESSION_HEADERS.length + 2 };
 
 // Archive tab (Archive.gs): chart-ready long format, one row per exercise per day per week, across mesocycles.
 var ARCHIVE_COLS = {
   MESO: 1, MESO_WEEK: 2, OVERALL_WEEK: 3, DATE: 4, WEEK_TYPE: 5, DAY: 6, EXERCISE: 7, MUSCLE: 8,
-  SETS_DONE: 9, WEIGHT: 10, AVG_REPS: 11, VOLUME: 12, TARGET_RIR: 13, ACTUAL_RIR: 14,
-  SORENESS: 15, PUMP: 16, TENDON: 17, CONNECTION: 18, FLAGS: 19
+  SECONDARY: 9, TERTIARY: 10,
+  SETS_DONE: 11, WEIGHT: 12, AVG_REPS: 13, VOLUME: 14, TARGET_RIR: 15, ACTUAL_RIR: 16,
+  SORENESS: 17, PUMP: 18, TENDON: 19, CONNECTION: 20, FLAGS: 21
 };
 var ARCHIVE_HEADERS = [
-  'Mesocycle', 'Meso Week', 'Overall Week', 'Date', 'Week Type', 'Day', 'Exercise', 'Muscle Group',
+  'Mesocycle', 'Meso Week', 'Overall Week', 'Date', 'Week Type', 'Day', 'Exercise'
+].concat(MUSCLE_HEADERS, [
   'Sets Done', 'Weight', 'Avg Reps', 'Volume', 'Target RIR', 'Actual RIR',
   'Soreness', 'Pump', 'Tendon', 'Connection', 'Flags'
-];
+]);
 var ARCHIVE_WEEK_TYPES = { working: 'Working', deload: 'Deload' };
 
 // Settings tab (SettingsLayout.gs): label in column A, value in column B, three sections.

@@ -1,14 +1,9 @@
 // Loads the .gs files into one context and runs the pure-logic tests locally.
-const fs = require('fs');
-const path = require('path');
-const vm = require('vm');
+const { loadGs } = require('./gs-files');
 
-const dir = path.join(__dirname, '..', 'apps-script');
-const files = ['Config.gs', 'Utils.gs', 'SessionBuilder.gs', 'Logger.gs', 'Rollover.gs', 'Feedback.gs', 'Deload.gs', 'Archive.gs', 'MuscleSummary.gs', 'Trends.gs', 'SettingsLayout.gs', 'Setup.gs', 'SheetTests.gs', 'FeedbackTests.gs', 'DeloadTests.gs', 'ArchiveTests.gs', 'MuscleSummaryTests.gs', 'Tests.gs'];
-const ctx = vm.createContext({ console, Logger: { log: console.log } });
-files.forEach(f => vm.runInContext(fs.readFileSync(path.join(dir, f), 'utf8'), ctx, { filename: f }));
+const ctx = loadGs({ Logger: { log: console.log } });
 
-const results = vm.runInContext('runPureTests()', ctx);
+const results = require('vm').runInContext('runPureTests()', ctx);
 results.forEach(r => console.log((r.pass ? 'PASS ' : 'FAIL ') + r.name + (r.detail ? ' — ' + r.detail : '')));
 const failed = results.filter(r => !r.pass).length;
 console.log(`\n${results.length - failed}/${results.length} passed`);

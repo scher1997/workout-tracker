@@ -156,11 +156,11 @@ function parseRepRange(text) {
   return m ? { min: Number(m[1]), max: Number(m[2]) } : null;
 }
 
-/** All non-empty Log body rows. */
+/** All non-empty Log body rows, as code rows [Date, ...Session, Secondary, Tertiary] (see LogLayout.gs). */
 function readLogRows(logSheet) {
   var last = lastDataRow(logSheet, LOG_HEADERS.length);
   if (last < 2) return [];
-  return logSheet.getRange(2, 1, last - 1, LOG_HEADERS.length).getValues();
+  return logSheet.getRange(2, 1, last - 1, LOG_HEADERS.length).getValues().map(logRowFromSheet);
 }
 
 /**

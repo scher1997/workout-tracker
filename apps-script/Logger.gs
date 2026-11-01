@@ -18,8 +18,10 @@ function isExerciseCompleted(sessionRow) {
  * sessionRows: Session body rows. existingKeys: {logKey: true} already in Log.
  * Returns {rows (new Log rows), duplicates (rows already logged), skipped (count not completed)}.
  * Weight falls back to the recommended weight when Actual Weight is blank.
+ * roles (optional, buildMuscleRoles().roles): fills each row's Secondary / Tertiary muscles from the Exercise Map.
+ * Returned rows are code rows [Date, ...Session, Secondary, Tertiary]; logRowToSheet() makes them sheet rows.
  */
-function planLogRows(sessionRows, existingKeys, date) {
+function planLogRows(sessionRows, existingKeys, date, roles) {
   var out = { rows: [], duplicates: [], skipped: 0 };
   var seen = {};
   sessionRows.forEach(function (r) {
@@ -29,7 +31,7 @@ function planLogRows(sessionRows, existingKeys, date) {
     if (parseNumber(row[SESSION_COLS.ACTUAL_WEIGHT - 1]) === null) {
       row[SESSION_COLS.ACTUAL_WEIGHT - 1] = row[SESSION_COLS.REC_WEIGHT - 1];
     }
-    var logRow = [date].concat(row);
+    var logRow = [date].concat(row, roleCells(roles, r[SESSION_COLS.EXERCISE - 1]));
     var key = logKey(r[SESSION_COLS.WEEK - 1], r[SESSION_COLS.DAY - 1], r[SESSION_COLS.EXERCISE - 1]);
     if (existingKeys[key] || seen[key]) out.duplicates.push(logRow);
     else out.rows.push(logRow);
@@ -41,9 +43,7 @@ function planLogRows(sessionRows, existingKeys, date) {
 /** Keys of everything already in the Log tab. */
 function readLogKeys(logSheet) {
   var keys = {};
-  if (logSheet.getLastRow() < 2) return keys;
-  var data = logSheet.getRange(2, 1, logSheet.getLastRow() - 1, LOG_HEADERS.length).getValues();
-  data.forEach(function (r) {
+  readLogRows(logSheet).forEach(function (r) {
     // Log column 1 is Date, so Session column n sits at index n.
     keys[logKey(r[SESSION_COLS.WEEK], r[SESSION_COLS.DAY], r[SESSION_COLS.EXERCISE])] = true;
   });
@@ -78,7 +78,7 @@ function completeSession(opts) {
   var last = lastDataRow(session, SESSION_HEADERS.length);
   var sessionRows = last > 1 ? session.getRange(2, 1, last - 1, SESSION_HEADERS.length).getValues() : [];
   var date = new Date(Utilities.formatDate(new Date(), ss.getSpreadsheetTimeZone(), 'yyyy/MM/dd'));
-  var plan = planLogRows(sessionRows, readLogKeys(log), date);
+  var plan = planLogRows(sessionRows, readLogKeys(log), date, readMuscleRoles(ss));
 
   var toWrite = plan.rows;
   if (plan.duplicates.length && interactive) {
@@ -91,7 +91,7 @@ function completeSession(opts) {
 
   if (toWrite.length) {
     var start = lastDataRow(log, LOG_HEADERS.length) + 1;
-    log.getRange(start, 1, toWrite.length, LOG_HEADERS.length).setValues(toWrite);
+    log.getRange(start, 1, toWrite.length, LOG_HEADERS.length).setValues(toWrite.map(logRowToSheet));
     log.getRange(start, 1, toWrite.length, 1).setNumberFormat('yyyy-mm-dd');
   }
 
