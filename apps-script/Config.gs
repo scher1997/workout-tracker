@@ -40,8 +40,13 @@ var SESSION_DAY_COLORS = ['#e8f0fe', '#fef7e0'];
 var SESSION_BLANK_COLOR = '#ffffff';
 // Sessions layout (SessionLayout.gs): columns frozen on the left (through Exercise), their widths (narrow, so the entry
 // cells keep room on a phone), and the gray of an Actual RIR / Actual Weight that still equals its recommendation.
+// Sheets can only freeze from the left, so Week and Day are hidden (still in the data) and Exercise is the one column in view.
+// Rep Range and Rep Target are hidden too: the prefilled sets show the target, and the gray look compares against it.
 var SESSION_FROZEN_COLS = SESSION_COLS.EXERCISE;
-var SESSION_FROZEN_WIDTHS = [[SESSION_COLS.WEEK, 44], [SESSION_COLS.DAY, 52], [SESSION_COLS.EXERCISE, 150]];
+var SESSION_FROZEN_WIDTHS = [[SESSION_COLS.EXERCISE, 150]];
+var SESSION_HIDDEN_COLS = [SESSION_COLS.WEEK, SESSION_COLS.DAY, SESSION_COLS.REP_RANGE, SESSION_COLS.REP_TARGET];
+// An exercise is done once all of these are filled in (Pump, Tendon, Connection).
+var SESSION_RATING_COLS = [SESSION_COLS.PUMP, SESSION_COLS.TENDON, SESSION_COLS.CONNECTION];
 var ACTUAL_DEFAULT_COLOR = '#9aa0a6';
 
 // Log and Archive split the muscle into three columns; Sessions keeps the single primary "Muscle Group" column.

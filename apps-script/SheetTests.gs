@@ -103,8 +103,15 @@ function runSheetTests() {
     // 5. Pass 2: completing a session logs rows once
     writeProgram([['Mon', exA, 3, 20, 8, 12], ['Tue', exB, 4, 50, 8, 12], ['Wed', exA, 2, 15, 8, 12]]);
     buildAndRead();
-    var enter = function (r, vals) {
+    var enterOnly = function (r, vals) {
       Object.keys(vals).forEach(function (k) { session.getRange(r, SESSION_COLS[k]).setValue(vals[k]); });
+    };
+    // An exercise counts as done once Pump, Tendon and Connection are filled in: unless a test sets them, enter the neutral
+    // ratings (they act exactly like blank ones in the progression rules).
+    var enter = function (r, vals) {
+      var all = { PUMP: 'mid', TENDON: 'neutral', CONNECTION: 'good' };
+      Object.keys(vals).forEach(function (k) { all[k] = vals[k]; });
+      enterOnly(r, all);
     };
     enter(2, { S1: 10, S2: 9, S3: 8, ACTUAL_RIR: 2, ACTUAL_WEIGHT: 22.5, PUMP: 'great', NOTES: 'felt good' });
     enter(3, { S1: 12, S2: 11, S3: 10, S4: 9, ACTUAL_RIR: 1 });   // row 4 left untouched
@@ -152,7 +159,10 @@ function runSheetTests() {
       week2.map(function (r) { return r[SESSION_COLS.REC_WEIGHT - 1]; }), [17.5, 100, 40]);
     check('rollover: rep targets 8 (reset to Rep Min), 11, rep min',
       week2.map(function (r) { return r[SESSION_COLS.REP_TARGET - 1]; }), [8, 11, 8]);
-    check('rollover: entry cells empty', week2.every(function (r) { return r[SESSION_COLS.S1 - 1] === ''; }), true);
+    check('rollover: the new week is prefilled with its Rep Target and holds no ratings or notes',
+      week2.every(function (r) {
+        return r[SESSION_COLS.S1 - 1] === r[SESSION_COLS.REP_TARGET - 1] && r[SESSION_COLS.PUMP - 1] === '' && r[SESSION_COLS.NOTES - 1] === '';
+      }), true);
 
     // Overriding Rec Weight recalculates Rep Target (programmatic edits don't fire the trigger, so call it)
     session.getRange(2, SESSION_COLS.REC_WEIGHT).setValue(20);
@@ -169,7 +179,7 @@ function runSheetTests() {
     enter(2, { S1: 10, S2: 10, S3: 10 });
     check('last mesocycle week refused (deload toggle off)', [completeWeek({ interactive: false }).ok, weekCell.getValue()], [false, 2]);
 
-    var helpers = { writeProgram: writeProgram, buildAndRead: buildAndRead, enter: enter, rowsOf: rowsOf,
+    var helpers = { writeProgram: writeProgram, buildAndRead: buildAndRead, enter: enter, enterOnly: enterOnly, rowsOf: rowsOf,
       completeWeek: completeWeek, exA: exA, exB: exB };
     // 8. Pass 4: pump, tendon, connection, soreness (FeedbackTests.gs)
     feedbackSheetTests(ss, check, helpers);

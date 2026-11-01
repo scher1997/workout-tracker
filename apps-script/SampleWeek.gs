@@ -37,16 +37,19 @@ var UPPER_LOWER_WEEK = [
 ];
 // The same week with gaps (null = untouched): Mon complete, Tue two of three, Thu skipped, Fri one exercise two sets short, rest untouched.
 var UPPER_LOWER_PARTIAL = [
-  { reps: [8, 8, 8, 8], rir: 2 }, { reps: [12, 12, 12], rir: 2 }, { reps: [10, 10, 10], rir: 2 },
-  { reps: [6, 6, 6, 6], rir: 2 }, { reps: [10, 10, 10], rir: 2 }, null,
+  { reps: [8, 8, 8, 8], rir: 2, pump: 'mid', tendon: 'neutral', connection: 'good' },
+  { reps: [12, 12, 12], rir: 2, pump: 'mid', tendon: 'neutral', connection: 'good' },
+  { reps: [10, 10, 10], rir: 2, pump: 'great', tendon: 'neutral', connection: 'good' },
+  { reps: [6, 6, 6, 6], rir: 2, pump: 'mid', tendon: 'neutral', connection: 'good' },
+  { reps: [10, 10, 10], rir: 2, pump: 'mid', tendon: 'good', connection: 'good' }, null,
   null, null, null,
-  { reps: [15, 15], rir: 2 }, null, null
+  { reps: [15, 15], rir: 2, pump: 'great', tendon: 'neutral', connection: 'good' }, null, null
 ];
 
-/** Session cell values for one week spec, keyed like SESSION_COLS. */
+/** Session cell values for one week spec, keyed like SESSION_COLS. Sets not in spec.reps were not done, so they are cleared. */
 function weekSpecToEntry(spec) {
   var entry = { ACTUAL_RIR: spec.rir, PUMP: spec.pump, TENDON: spec.tendon, CONNECTION: spec.connection, SORENESS: spec.soreness };
-  spec.reps.forEach(function (n, i) { entry['S' + (i + 1)] = n; });
+  for (var i = 0; i < SESSION_REP_COLS.length; i++) entry['S' + (i + 1)] = i < spec.reps.length ? spec.reps[i] : '';
   if (spec.weight !== undefined) entry.ACTUAL_WEIGHT = spec.weight;
   if (spec.notes) entry.NOTES = spec.notes;
   return entry;
@@ -87,7 +90,7 @@ function loadSampleWeek(opts) {
   specs.forEach(function (spec, i) {
     if (!spec) return;
     var entry = weekSpecToEntry(spec);
-    Object.keys(entry).forEach(function (k) { session.getRange(i + 2, SESSION_COLS[k]).setValue(entry[k]); });
+    Object.keys(entry).forEach(function (k) { if (entry[k] !== undefined) session.getRange(i + 2, SESSION_COLS[k]).setValue(entry[k]); });
     filled++;
   });
   refreshSummarySafe(ss);   // the Exercise Map changed

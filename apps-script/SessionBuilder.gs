@@ -148,6 +148,10 @@ function clearSession(opts) {
   var ss = SpreadsheetApp.getActive();
   var session = ss.getSheetByName(TABS.SESSION);
   if (!session) return;
+  if (!interactive) {
+    var gaps = weekGaps(readSessionBody(session));
+    if (gaps.unfinished.length) { setStatus(ss, 'Not cleared: ' + unfinishedMessage(gaps)); return; }
+  }
   var unlogged = countUnlogged(ss);
   if (unlogged && !interactive) {
     completeSession({ interactive: false });   // phone: log first so nothing is lost, then clear
@@ -195,7 +199,7 @@ function writeSession(session, rows) {
   if (session.getLastRow() > 1) {
     session.getRange(2, 1, session.getLastRow() - 1, SESSION_HEADERS.length).clearContent();
   }
-  session.getRange(2, 1, rows.length, SESSION_HEADERS.length).setValues(fillActualDefaults(rows));
+  session.getRange(2, 1, rows.length, SESSION_HEADERS.length).setValues(fillSessionDefaults(rows));
   paintSessionDays(session, rows);
 }
 

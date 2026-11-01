@@ -26,6 +26,7 @@ function runLogLayoutTests() {
     r[SESSION_COLS.WEEK - 1] = 1; r[SESSION_COLS.DAY - 1] = day; r[SESSION_COLS.EXERCISE - 1] = exercise;
     r[SESSION_COLS.MUSCLE - 1] = primary; r[SESSION_COLS.SETS - 1] = sets; r[SESSION_COLS.REC_WEIGHT - 1] = 50;
     reps.forEach(function (n, i) { r[SESSION_COLS.S1 - 1 + i] = n; });
+    r[SESSION_COLS.PUMP - 1] = 'mid'; r[SESSION_COLS.TENDON - 1] = 'neutral'; r[SESSION_COLS.CONNECTION - 1] = 'good';   // rated = done = logged
     return r;
   };
   var byName = function (plan) {

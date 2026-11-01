@@ -65,8 +65,8 @@ function runPureTests() {
     ['Tue', 'Mystery Lift', 3, '', '', '']
   ], lookup, base).rows;
   var put = function (row, vals) { Object.keys(vals).forEach(function (k) { row[SESSION_COLS[k] - 1] = vals[k]; }); };
-  put(logSess[0], { S1: 10, S2: 9, S3: 8, ACTUAL_RIR: 2, ACTUAL_WEIGHT: 27.5, PUMP: 'great' });
-  put(logSess[1], { S1: 8, ACTUAL_RIR: 3 });   // blank Actual Weight -> falls back to rec weight
+  put(logSess[0], { S1: 10, S2: 9, S3: 8, ACTUAL_RIR: 2, ACTUAL_WEIGHT: 27.5, PUMP: 'great', TENDON: 'good', CONNECTION: 'good' });
+  put(logSess[1], { S1: 8, ACTUAL_RIR: 3, PUMP: 'mid', TENDON: 'neutral', CONNECTION: 'good' });   // blank Actual Weight -> falls back to rec weight
   var logPlan = planLogRows(logSess, {}, 'D');
   check('log: completed rows only', logPlan.rows.length, 2);
   check('log: untouched exercise counted as skipped', logPlan.skipped, 1);

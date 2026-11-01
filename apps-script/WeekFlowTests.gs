@@ -18,25 +18,31 @@ function runWeekFlowTests() {
     dayBackgrounds(['Mon', 'Tue', ' mon ', 'Wed']), [C[0], C[1], C[0], C[0]]);
   check('day colours: no rows', dayBackgrounds([]), []);
 
-  // Week gaps
-  var row = function (day, exercise, sets, reps) {
+  // Week gaps: done = all ratings, started-but-unrated stops Complete Week, untouched only warns
+  var RATED = { PUMP: 'mid', TENDON: 'neutral', CONNECTION: 'good' };
+  var row = function (day, exercise, sets, vals) {
     var r = [];
     for (var i = 0; i < SESSION_HEADERS.length; i++) r.push('');
-    r[SESSION_COLS.DAY - 1] = day; r[SESSION_COLS.EXERCISE - 1] = exercise; r[SESSION_COLS.SETS - 1] = sets;
-    reps.forEach(function (n, i) { r[SESSION_COLS.S1 - 1 + i] = n; });
+    r[SESSION_COLS.DAY - 1] = day; r[SESSION_COLS.EXERCISE - 1] = exercise; r[SESSION_COLS.SETS - 1] = sets; r[SESSION_COLS.REP_TARGET - 1] = 10;
+    r = fillSessionDefaults([r])[0];   // as built; then what the person did on top of it
+    Object.keys(vals || {}).forEach(function (k) { r[SESSION_COLS[k] - 1] = vals[k]; });
     return r;
   };
-  var full = [row('Mon', 'Bench', 3, [8, 8, 8]), row('Mon', 'Row', 3, [10, 10, 10, 9]), row('', '', '', [])];
+  var withRatings = function (extra) { var v = {}; Object.keys(RATED).forEach(function (k) { v[k] = RATED[k]; }); Object.keys(extra || {}).forEach(function (k) { v[k] = extra[k]; }); return v; };
+  var full = [row('Mon', 'Bench', 3, withRatings()), row('Mon', 'Row', 3, withRatings({ S4: 9 })), row('', '', '', {})];
   check('gaps: a full week has none, extra sets are fine, blank rows ignored',
-    [weekGaps(full), gapWarning(weekGaps(full))], [{ notDone: [], short: [], total: 2 }, '']);
-  var partial = [row('Mon', 'Bench', 3, [8, 8, 8]), row('Tue', 'Squat', 4, [6, 6]), row('Thu', 'Curl', 3, []), row('', 'Plank', 2, [])];
+    [weekGaps(full), gapWarning(weekGaps(full))], [{ notDone: [], unfinished: [], short: [], total: 2 }, '']);
+  var partial = [row('Mon', 'Bench', 3, withRatings()), row('Tue', 'Squat', 4, withRatings({ S3: '', S4: '' })),
+    row('Thu', 'Curl', 3, {}), row('', 'Plank', 2, {}), row('Fri', 'Row', 3, { S1: 7 })];
   var gaps = weekGaps(partial);
-  check('gaps: no reps = not done, fewer sets than planned = short',
-    gaps, { notDone: ['Thu Curl', 'Plank'], short: ['Tue Squat 2/4 sets'], total: 4 });
-  check('gaps: warning names both',
-    gapWarning(gaps), 'Warning: 2 of 4 exercise(s) have no reps and will not be logged: Thu Curl, Plank. Fewer sets than planned: Tue Squat 2/4 sets.');
-  check('gaps: a set skipped in the middle counts as one set short',
-    weekGaps([row('Mon', 'Bench', 3, [8, '', 8])]).short, ['Mon Bench 2/3 sets']);
+  check('gaps: untouched = not done, ratings but fewer sets = short, changed reps without ratings = unfinished',
+    gaps, { notDone: ['Thu Curl', 'Plank'], unfinished: ['Fri Row (pump, tendon, connection)'], short: ['Tue Squat 2/4 sets'], total: 5 });
+  check('gaps: warning names the untouched and the short ones',
+    gapWarning(gaps), 'Warning: 2 of 5 exercise(s) were not done and will not be logged: Thu Curl, Plank. Fewer sets than planned: Tue Squat 2/4 sets.');
+  check('gaps: the refusal names the exercise and the missing ratings',
+    unfinishedMessage(gaps), '1 exercise(s) are started but missing feedback. Fill in Pump, Tendon and Connection for: Fri Row (pump, tendon, connection). Then try again.');
+  check('gaps: a set cleared in the middle counts as one set short',
+    weekGaps([row('Mon', 'Bench', 3, withRatings({ S2: '' }))]).short, ['Mon Bench 2/3 sets']);
   return results;
 }
 
@@ -101,7 +107,7 @@ function weekFlowSheetTests(ss, check, h) {
     check('sample week (incomplete): loaded, 6 exercises filled, week 1', [loadedPartial.ok, loadedPartial.filled, weekCell.getValue()], [true, 6, 1]);
     var partial = completeWeek({ interactive: false });
     check('incomplete week: still ok, rolled to week 2', [partial.ok, weekCell.getValue()], [true, 2]);
-    check('incomplete week: the 6 exercises with reps are logged (Mon 3, Tue 2, Fri 1)',
+    check('incomplete week: the 6 exercises that were rated are logged (Mon 3, Tue 2, Fri 1)',
       logged().map(function (r) { return r[SESSION_COLS.DAY] + ' ' + r[SESSION_COLS.EXERCISE]; }),
       ['Mon Barbell Bench Press', 'Mon Chest-Supported Row', 'Mon Overhead Press', 'Tue Back Squat', 'Tue Romanian Deadlift', 'Fri Leg Press']);
     check('incomplete week: gaps name what was missed',
@@ -109,7 +115,7 @@ function weekFlowSheetTests(ss, check, h) {
       [['Tue Standing Calf Raise', 'Thu Incline Dumbbell Press', 'Thu Lat Pulldown', 'Thu Dumbbell Curl', 'Fri Seated Leg Curl', 'Fri Hip Thrust'],
        ['Fri Leg Press 2/3 sets']]);
     check('incomplete week: the status warns instead of refusing',
-      [status().indexOf('Warning: 6 of 12 exercise(s) have no reps and will not be logged') > -1,
+      [status().indexOf('Warning: 6 of 12 exercise(s) were not done and will not be logged') > -1,
        status().indexOf('Fri Leg Press 2/3 sets') > -1], [true, true]);
     check('incomplete week: week 2 still has all 12 rows; missed exercises back at Program weights',
       [sessionCol('EXERCISE').length, sessionCol('REC_WEIGHT').slice(5)],

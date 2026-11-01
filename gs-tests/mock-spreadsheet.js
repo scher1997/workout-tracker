@@ -197,6 +197,8 @@ class Sheet {
   setFrozenRows(n) { this.frozenRows = n; return this; }
   setFrozenColumns(n) { this.frozenCols = n; return this; }
   getFrozenColumns() { return this.frozenCols || 0; }
+  hideColumns(col, n) { for (let i = 0; i < (n || 1); i++) (this.hidden = this.hidden || new Set()).add(col + i); return this; }
+  isColumnHiddenByUser(col) { return !!this.hidden && this.hidden.has(col); }
   setColumnWidth(col, w) { (this.widths = this.widths || {})[col] = w; return this; }
   getColumnWidth(col) { return (this.widths || {})[col] || 100; }
   setConditionalFormatRules(rules) { this.cfRules = rules; return this; }

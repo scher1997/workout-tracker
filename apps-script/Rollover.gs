@@ -190,6 +190,7 @@ function recalcRepsForWeightEdit(range, oldValue) {
     var reps = recalcRepTarget(prev.row, weight, rr.max);
     if (reps === null) return;
     sh.getRange(first + i, SESSION_COLS.REP_TARGET).setValue(reps);
+    followRepTarget(sh, first + i, row, reps);   // prefilled sets still on the old target follow it
     updated++;
   });
   if (updated) ss.toast('Rep Target recalculated for ' + updated + ' exercise(s) to match last week\'s volume.', 'Workout Tracker', 4);
@@ -235,11 +236,11 @@ function completeWeek(opts) {
     return rows.some(function (r) { return parseNumber(r[SESSION_COLS.WEEK]) === settings.week; });
   };
   var pending = countUnlogged(ss);
-  var sessionLast = lastDataRow(session, SESSION_HEADERS.length);
-  var gaps = weekGaps(sessionLast > 1 ? session.getRange(2, 1, sessionLast - 1, SESSION_HEADERS.length).getValues() : []);
-  var warning = gapWarning(gaps);   // a warning only: the week is logged and rolled either way
+  var gaps = weekGaps(readSessionBody(session));
+  if (gaps.unfinished.length) return refuse(unfinishedMessage(gaps));   // started exercises must be finished first
+  var warning = gapWarning(gaps);   // untouched exercises only warn: the rest of the week is logged and rolled
   if (!pending && !loggedThisWeek(readLogRows(log))) {
-    return refuse('Nothing logged for week ' + settings.week + ' yet. Enter reps in Session, then try again.');
+    return refuse('Nothing logged for week ' + settings.week + ' yet. Fill in Pump, Tendon and Connection for the exercises you did, then try again.');
   }
 
   if (interactive) {

@@ -184,7 +184,7 @@ function archiveSheetTests(ss, check, h) {
   check('new meso: name advanced, back to week 1', [nameCell.getValue(), weekCell.getValue()], ['Test Meso 2', 1]);
   check('new meso: week 1 Session rebuilt from the new start weights',
     [scol('WEEK'), scol('REC_WEIGHT'), scol('REP_TARGET'), scol('RIR'), scol('SETS'), scol('FLAGS'), scol('S1')],
-    [[1, 1], [22.5, 50], [8, 8], [rirForWeek(ladder, 1), rirForWeek(ladder, 1)], [3, 3], ['', ''], ['', '']]);
+    [[1, 1], [22.5, 50], [8, 8], [rirForWeek(ladder, 1), rirForWeek(ladder, 1)], [3, 3], ['', ''], [8, 8]]);   // S1 is prefilled with the Rep Target
   check('new meso: status summarises', statusText().indexOf('Archived 6 rows as "Test Meso 1"') > -1, true);
   check('new meso: a second tick right away is refused, Archive unchanged', [startNewMesocycle({ interactive: false }).ok, archRows().length], [false, 6]);
 

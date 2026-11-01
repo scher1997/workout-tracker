@@ -9,9 +9,9 @@ function logKey(week, day, exercise) {
   return String(week) + '|' + normalizeName(day) + '|' + normalizeName(exercise);
 }
 
-/** True once any set has a rep count typed in. */
+/** An exercise is completed (and gets logged) once Pump, Tendon and Connection are all filled in. Sets come prefilled. */
 function isExerciseCompleted(sessionRow) {
-  return SESSION_REP_COLS.some(function (c) { return parseNumber(sessionRow[c - 1]) !== null; });
+  return rowIsDone(sessionRow);
 }
 
 /**
@@ -41,17 +41,19 @@ function planLogRows(sessionRows, existingKeys, date, roles) {
 }
 
 /**
- * What a week's Session rows still lack, for the Complete Week warning.
- * notDone: exercises with no reps (they are not logged). short: logged, but fewer sets than planned.
+ * What a week's Session rows still lack, for Complete Week (SessionLayout.gs has the done / started rules).
+ * notDone: never touched, so not logged (a warning). unfinished: started but missing ratings (stops Complete Week).
+ * short: done, but fewer sets than planned (a warning).
  */
 function weekGaps(sessionRows) {
-  var out = { notDone: [], short: [], total: 0 };
+  var out = { notDone: [], unfinished: [], short: [], total: 0 };
   sessionRows.forEach(function (r) {
     var name = cleanName(r[SESSION_COLS.EXERCISE - 1]);
     if (!name) return;
     out.total++;
     var label = (cleanName(r[SESSION_COLS.DAY - 1]) + ' ' + name).trim();
-    if (!isExerciseCompleted(r)) { out.notDone.push(label); return; }
+    if (!rowStarted(r)) { out.notDone.push(label); return; }
+    if (!rowIsDone(r)) { out.unfinished.push(label + ' (' + missingRatings(r).join(', ') + ')'); return; }
     var done = SESSION_REP_COLS.filter(function (c) { return parseNumber(r[c - 1]) !== null; }).length;
     var planned = toPosInt(r[SESSION_COLS.SETS - 1], 0);
     if (planned && done < planned) out.short.push(label + ' ' + done + '/' + planned + ' sets');
@@ -62,9 +64,21 @@ function weekGaps(sessionRows) {
 /** One warning line for weekGaps(), or '' when every programmed exercise was done in full. */
 function gapWarning(gaps) {
   var parts = [];
-  if (gaps.notDone.length) parts.push(gaps.notDone.length + ' of ' + gaps.total + ' exercise(s) have no reps and will not be logged: ' + gaps.notDone.join(', ') + '.');
+  if (gaps.notDone.length) parts.push(gaps.notDone.length + ' of ' + gaps.total + ' exercise(s) were not done and will not be logged: ' + gaps.notDone.join(', ') + '.');
   if (gaps.short.length) parts.push('Fewer sets than planned: ' + gaps.short.join(', ') + '.');
   return parts.length ? 'Warning: ' + parts.join(' ') : '';
+}
+
+/** Why Complete Week / Start New Mesocycle / Clear will not run: started exercises are missing ratings. */
+function unfinishedMessage(gaps) {
+  return gaps.unfinished.length + ' exercise(s) are started but missing feedback. Fill in Pump, Tendon and Connection for: '
+    + gaps.unfinished.join(', ') + '. Then try again.';
+}
+
+/** The Session tab's body rows (empty prefilled-dropdown rows below the data are dropped). */
+function readSessionBody(session) {
+  var last = lastDataRow(session, SESSION_HEADERS.length);
+  return last > 1 ? session.getRange(2, 1, last - 1, SESSION_HEADERS.length).getValues() : [];
 }
 
 /** Keys of everything already in the Log tab. */

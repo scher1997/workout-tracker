@@ -160,6 +160,8 @@ function startNewMesocycle(opts) {
   if (archiveHasLabel(archBody, label)) {
     return refuse('Archive already has "' + label + '". Change "Mesocycle name" in Settings, then try again.');
   }
+  var gaps = weekGaps(readSessionBody(session));
+  if (gaps.unfinished.length) return refuse(unfinishedMessage(gaps));
   var pending = countUnlogged(ss);
   if (!pending && !readLogRows(log).length) return refuse('Nothing in Log to archive yet.');
 
