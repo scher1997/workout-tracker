@@ -19,7 +19,8 @@ function onOpen() {
     .addItem('Load sample week: incomplete (copy only)', 'loadSampleWeekIncomplete')
     .addSeparator()
     .addItem('Run tests', 'runAllTests')
-    .addItem('Run sheet tests', 'runSheetTests')
+    .addItem('Run sheet tests 1 of 2', 'runSheetTestsPart1')
+    .addItem('Run sheet tests 2 of 2', 'runSheetTestsPart2')
     .addToUi();
 }
 

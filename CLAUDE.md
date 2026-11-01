@@ -11,7 +11,9 @@ The old Python tracker was removed in Pass 11 (it is in git history before that 
 - Node is at `C:\Program Files\nodejs`: `export PATH="$PATH:/c/Program Files/nodejs"`.
 - Push: the user runs `clasp push --force` themselves with the `!` prefix (auto mode
   denies it from Claude). Then in the Sheet: Workout > Set up workbook, then
-  Run sheet tests. Report the counts before calling a pass done.
+  Run sheet tests 1 of 2 and 2 of 2 (the whole suite exceeds Apps Script's 6-minute limit, and a
+  killed run never restores the user's data). Report both counts before calling a pass done.
+  Timing per section goes to the Executions log. `run-sheet-tests.js --part=1|2` runs one half.
 - New `.gs` file: add it to `gs-tests/gs-files.js` (shared by both runners).
 
 ## Session start

@@ -1,7 +1,8 @@
 // Runs the real setupWorkbook() and runSheetTests() against the in-memory SpreadsheetApp mock.
 // Catches logic and API-misuse bugs without a clasp push. It cannot check chart rendering,
 // protections as the Sheet enforces them, or phone behaviour: keep the in-Sheet run for those.
-// Usage: node gs-tests/run-sheet-tests.js [--verbose]   (--verbose also prints the script's Logger output)
+// Usage: node gs-tests/run-sheet-tests.js [--verbose] [--part=1|--part=2]
+//   --verbose also prints the script's Logger output; --part runs one half of the suite (the menu's 1 of 2 / 2 of 2).
 const vm = require('vm');
 const { loadGs } = require('./gs-files');
 const { createMockEnv } = require('./mock-spreadsheet');
@@ -25,7 +26,9 @@ check('setup: second run keeps the same tabs in order', env.ss.getSheets().map(s
 check('setup: exactly one onSettingsEdit trigger', env.triggers.filter(t => t.getHandlerFunction() === 'onSettingsEdit').length, 1);
 check('setup: Program seeded from the map', env.ss.getSheetByName('Program').getRange(2, 2).getValue() !== '', true);
 
-const sheetResults = run('runSheetTests()');
+// --part=1 or --part=2 runs one half (what the Workout menu does on a real Sheet); no flag runs both.
+const partArg = (process.argv.find(a => a.startsWith('--part=')) || '').slice(7);
+const sheetResults = run(`runSheetTests(${partArg === '1' || partArg === '2' ? partArg : ''})`);
 // The tests paint Sessions by day while they run; afterwards the tab must look like the user's own (empty here) rows again.
 const leftover = [];
 const sessions = env.ss.getSheetByName('Sessions');
