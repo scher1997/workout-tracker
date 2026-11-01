@@ -26,6 +26,11 @@ check('setup: exactly one onSettingsEdit trigger', env.triggers.filter(t => t.ge
 check('setup: Program seeded from the map', env.ss.getSheetByName('Program').getRange(2, 2).getValue() !== '', true);
 
 const sheetResults = run('runSheetTests()');
+// The tests paint Sessions by day while they run; afterwards the tab must look like the user's own (empty here) rows again.
+const leftover = [];
+const sessions = env.ss.getSheetByName('Sessions');
+for (let r = 2; r <= 20; r++) if (sessions.getRange(r, 1).getBackground() !== '#ffffff') leftover.push(r);
+check('after the tests: no day tint left on Sessions rows that are empty again', leftover, []);
 const all = results.concat(sheetResults);
 const failed = all.filter(r => !r.pass);
 failed.forEach(r => console.log('FAIL ' + r.name + ' — ' + r.detail));

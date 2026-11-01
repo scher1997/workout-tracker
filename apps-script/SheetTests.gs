@@ -201,6 +201,7 @@ function runSheetTests() {
     if (logBackup.length) logSheet.getRange(2, 1, logBackup.length, LOG_HEADERS.length).setValues(logBackup);
     clearBody(session, SESSION_HEADERS.length);
     if (sessBackup.length) session.getRange(2, 1, sessBackup.length, SESSION_HEADERS.length).setValues(sessBackup);
+    paintSessionDays(session, sessBackup);   // the tests' day tints must not outlive the rows they were painted for
     SUMMARY_STATE.paused = false;
     refreshSummarySafe(ss);   // the summary follows the restored Log / Archive / Exercise Map
   }
