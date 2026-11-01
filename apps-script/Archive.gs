@@ -102,12 +102,12 @@ function archiveRows(logRows, label, overallOffset) {
 
 /**
  * New Program Start Weight column: where Complete Week would have taken each exercise next, from its latest working
- * (non-deload) Log entry. That is its last weight, raised by a progression bump when the last working week hit
- * PROGRESSION.increaseAtReps. An exercise last logged in an earlier week, or on maintenance (tendon), keeps its weight.
+ * (non-deload) Log entry. That is its last weight, raised by a progression bump when the last working week reached
+ * the row's Rep Max (rep range from the Program row, else the Settings defaults). An exercise last logged in an earlier week, or on maintenance (tendon), keeps its weight.
  * Exercises with no usable entry (and spacer rows) keep their current value.
  * Returns {column: [[weight], ...] one per Program row, updated: [exercise names], bumped: [exercise names raised]}.
  */
-function planProgramStartWeights(progRows, logRows) {
+function planProgramStartWeights(progRows, logRows, settings) {
   var working = withoutDeload(logRows);
   var latest = latestEntries(working, Infinity);
   var lastWeek = 0;
@@ -119,7 +119,7 @@ function planProgramStartWeights(progRows, logRows) {
     var found = exercise ? latest[key] : null;
     var weight = found ? parseNumber(found.row[SESSION_COLS.ACTUAL_WEIGHT]) : null;
     if (weight === null || weight <= 0) return [r[3]];
-    var next = nextTarget(found.row, { min: 1, max: 1 }, found.week < lastWeek);   // only its weight is used here
+    var next = nextTarget(found.row, rowRepRange(r, settings), found.week < lastWeek);   // only its weight is used here
     var raised = next && next.action === 'increase';
     if (raised) weight = next.weight;
     if (!seen[key]) { seen[key] = true; updated.push(exercise); if (raised) bumped.push(exercise); }
@@ -192,7 +192,7 @@ function startNewMesocycle(opts) {
   try {
     var progRows = program.getLastRow() > 1
       ? program.getRange(2, 1, program.getLastRow() - 1, PROGRAM_HEADERS.length).getValues() : [];
-    var weights = planProgramStartWeights(progRows, logRows);
+    var weights = planProgramStartWeights(progRows, logRows, settings);
     if (progRows.length) program.getRange(2, 4, progRows.length, 1).setValues(weights.column);
     // Session first: while Log still holds its rows nothing counts as unlogged, so the clear is allowed.
     clearSession({ interactive: false });

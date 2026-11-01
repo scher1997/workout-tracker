@@ -25,12 +25,7 @@ function bumpedWeight(weight) {
   return weight + Math.max(PROGRESSION.minBump, step);
 }
 
-/** Highest rep target we will prescribe for a row with this Rep Max. */
-function repCeilingFor(repMax) {
-  return Math.max(PROGRESSION.repCeiling, repMax);
-}
-
-/** Reps at newWeight that match prevWeight x prevReps volume, capped at the ceiling. */
+/** Reps at newWeight that match prevWeight x prevReps volume, at most the ceiling (the row's Rep Max). */
 function matchReps(prevWeight, prevReps, newWeight, ceiling) {
   if (!(newWeight > 0)) return null;
   var reps = Math.round(prevWeight * prevReps / newWeight);
@@ -38,7 +33,9 @@ function matchReps(prevWeight, prevReps, newWeight, ceiling) {
 }
 
 /**
- * Next week's weight and rep target from one Log row.
+ * Next week's weight and rep target from one Log row. Double progression: reps first, weight second.
+ * Below Rep Max the weight is held and the rep target creeps up (at most Rep Max). Once the performed reps reach
+ * Rep Max the weight goes up one step and the rep target resets to Rep Min; nothing is raised before that.
  * carryOnly: the row is from an earlier week (exercise skipped since) -> repeat it, no progression.
  * Feedback (Feedback.gs): bad tendon -> 'maintain' (weight and reps held, caller drops a set);
  * pump rating sets the rep bump on the 'hold' path (+1, or +2 for no pump).
@@ -48,7 +45,7 @@ function nextTarget(logRow, range, carryOnly) {
   var weight = parseNumber(logRow[SESSION_COLS.ACTUAL_WEIGHT]);
   var reps = performedReps(logRow);
   if (weight === null || weight <= 0 || reps === null) return null;
-  var ceiling = repCeilingFor(range.max);
+  var ceiling = range.max;
   var name = cleanName(logRow[SESSION_COLS.EXERCISE]);
   if (isMaintenance(logRow)) {
     return { action: 'maintain', weight: weight, repTarget: Math.min(Math.max(reps, range.min), ceiling), label: name };
@@ -56,10 +53,9 @@ function nextTarget(logRow, range, carryOnly) {
   if (carryOnly) {
     return { action: 'carry', weight: weight, repTarget: Math.min(Math.max(reps, range.min), ceiling), label: name };
   }
-  if (reps >= PROGRESSION.increaseAtReps) {
+  if (reps >= range.max) {
     var up = bumpedWeight(weight);
-    return { action: 'increase', weight: up, repTarget: matchReps(weight, reps, up, ceiling),
-      label: name + ' ' + weight + '→' + up };
+    return { action: 'increase', weight: up, repTarget: range.min, label: name + ' ' + weight + '→' + up };
   }
   var bump = pumpRepBump(logRow[SESSION_COLS.PUMP]);
   return { action: 'hold', weight: weight, repTarget: Math.min(Math.max(reps + bump, range.min), ceiling), label: name };
@@ -147,7 +143,7 @@ function recalcRepTarget(prevLogRow, newWeight, repMax) {
   var weight = parseNumber(prevLogRow[SESSION_COLS.ACTUAL_WEIGHT]);
   var reps = performedReps(prevLogRow);
   if (weight === null || weight <= 0 || reps === null) return null;
-  return matchReps(weight, reps, newWeight, repCeilingFor(repMax));
+  return matchReps(weight, reps, newWeight, repMax);
 }
 
 /** "8–12" -> {min: 8, max: 12}; null if unreadable. */

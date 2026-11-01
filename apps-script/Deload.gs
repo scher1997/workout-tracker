@@ -105,7 +105,7 @@ function planDeloadWeek(programRows, logRows, lookup, settings) {
     if (weight !== null && weight > 0 && reps !== null) {
       var range = rowRepRange(r, settings);
       ov.weight = weight;
-      ov.repTarget = Math.min(Math.max(reps, range.min), repCeilingFor(range.max));
+      ov.repTarget = Math.min(Math.max(reps, range.min), range.max);
       summary.deload.push(exercise);
     } else {
       summary.fresh.push(exercise);

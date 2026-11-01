@@ -140,7 +140,7 @@ function runSheetTests() {
     writeProgram([['Mon', exA, 3, 15, 8, 12], ['Tue', exB, 3, 100, 8, 12], ['Wed', exA, 3, 40, 8, 12]]);
     clearBody(logSheet, LOG_HEADERS.length);
     buildAndRead();
-    enter(2, { S1: 15, S2: 15, S3: 15 });   // 15 reps -> weight up (Rec Weight logged)
+    enter(2, { S1: 12, S2: 12, S3: 12 });   // Rep Max 12 reached -> weight up, reps reset to Rep Min
     enter(3, { S1: 10, S2: 10, S3: 10 });   // holds weight, +1 rep
     var rolled = completeWeek({ interactive: false });   // row 4 never touched
     var week2 = rowsOf(session, SESSION_HEADERS.length);
@@ -150,14 +150,14 @@ function runSheetTests() {
       [[2, 2], [2, 2], [2, 2]]);
     check('rollover: weights 15->17.5, 100 held, unlogged back to Program',
       week2.map(function (r) { return r[SESSION_COLS.REC_WEIGHT - 1]; }), [17.5, 100, 40]);
-    check('rollover: rep targets 13 (volume match), 11, rep min',
-      week2.map(function (r) { return r[SESSION_COLS.REP_TARGET - 1]; }), [13, 11, 8]);
+    check('rollover: rep targets 8 (reset to Rep Min), 11, rep min',
+      week2.map(function (r) { return r[SESSION_COLS.REP_TARGET - 1]; }), [8, 11, 8]);
     check('rollover: entry cells empty', week2.every(function (r) { return r[SESSION_COLS.S1 - 1] === ''; }), true);
 
     // Overriding Rec Weight recalculates Rep Target (programmatic edits don't fire the trigger, so call it)
     session.getRange(2, SESSION_COLS.REC_WEIGHT).setValue(20);
     recalcRepsForWeightEdit(session.getRange(2, SESSION_COLS.REC_WEIGHT), 17.5);
-    check('override 17.5 -> 20 lb: reps 13 -> 11', session.getRange(2, SESSION_COLS.REP_TARGET).getValue(), 11);
+    check('override 17.5 -> 20 lb: reps 8 -> 9 (15 lb x 12 reps last week = 180 volume)', session.getRange(2, SESSION_COLS.REP_TARGET).getValue(), 9);
 
     // A second tick with nothing logged for week 2 must not skip ahead
     var again = completeWeek({ interactive: false });

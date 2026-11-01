@@ -101,12 +101,11 @@ var PASS8_SETTINGS_ROWS = {
 };
 
 // Rollover rules (Rollover.gs). "Reps" for an exercise = average over the sets entered, rounded.
+// Double progression: reps climb toward the row's Rep Max first; reaching it raises the weight and resets reps to Rep Min.
 var PROGRESSION = {
   increasePct: 0.05,   // weight bump when it is time to go up
   weightStep: 2.5,     // bumps round to the nearest step (lb)
-  minBump: 2.5,        // never bump by less than this, even if 5% rounds to zero
-  repCeiling: 13,      // next-week rep target stops here (or Rep Max if higher)
-  increaseAtReps: 15   // reps at or above this -> raise weight instead of chasing reps
+  minBump: 2.5         // never bump by less than this, even if 5% rounds to zero
 };
 
 // Feedback rules (Feedback.gs). Rating strings must match OPTIONS below (compared case-insensitively).

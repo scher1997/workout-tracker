@@ -101,23 +101,31 @@ function runPureTests() {
   check('rollover: week 1 -> 2 stamps week and RIR 2', [cell(wk2, 'WEEK'), cell(wk2, 'RIR')], [2, 2]);
   check('rollover: week 3 -> 4 gives RIR 0',
     cell(nextWeek(prog, [logRow(3, 'Mon', 'Zork Curl', 15, [10, 10, 10])], 3), 'RIR'), 0);
-  check('rollover: below 15 reps keeps weight, +1 rep', [cell(wk2, 'REC_WEIGHT'), cell(wk2, 'REP_TARGET')], [15, 11]);
-  check('rollover: rep target stops at ceiling 13',
-    cell(nextWeek(prog, [logRow(1, 'Mon', 'Zork Curl', 15, [14, 14, 13])]), 'REP_TARGET'), 13);
+  check('rollover: below Rep Max keeps weight, +1 rep', [cell(wk2, 'REC_WEIGHT'), cell(wk2, 'REP_TARGET')], [15, 11]);
+  check('rollover: rep target climbs to Rep Max 12 (average 11 + 1)',
+    cell(nextWeek(prog, [logRow(1, 'Mon', 'Zork Curl', 15, [11, 11, 12])]), 'REP_TARGET'), 12);
   check('rollover: reps below range -> rep min',
     cell(nextWeek(prog, [logRow(1, 'Mon', 'Zork Curl', 15, [5, 5, 5])]), 'REP_TARGET'), 8);
 
-  var up = nextWeek(prog, [logRow(1, 'Mon', 'Zork Curl', 15, [15, 15, 15])]);
-  check('rollover: 15 reps -> weight increase', up.summary.increase.length, 1);
-  check('rollover: 15 reps never stays at old weight', cell(up, 'REC_WEIGHT') > 15, true);
-  check('rollover: reps averaged over sets (15,12,10 holds)',
-    nextWeek(prog, [logRow(1, 'Mon', 'Zork Curl', 15, [15, 12, 10])]).summary.hold.length, 1);
+  // Double progression: weight only goes up once the average reps reach Rep Max (12 here); reps then reset to Rep Min
+  var up = nextWeek(prog, [logRow(1, 'Mon', 'Zork Curl', 15, [12, 12, 12])]);
+  check('rollover: Rep Max reached -> weight increase', up.summary.increase.length, 1);
+  check('rollover: Rep Max reached never stays at old weight', cell(up, 'REC_WEIGHT') > 15, true);
+  check('rollover: reps beyond Rep Max also raise the weight',
+    nextWeek(prog, [logRow(1, 'Mon', 'Zork Curl', 15, [14, 14, 13])]).summary.increase.length, 1);
+  check('rollover: reps averaged over sets (12,10,10 holds at the old weight)',
+    [nextWeek(prog, [logRow(1, 'Mon', 'Zork Curl', 15, [12, 10, 10])]).summary.hold.length, cell(nextWeek(prog, [logRow(1, 'Mon', 'Zork Curl', 15, [12, 10, 10])]), 'REC_WEIGHT')], [1, 15]);
+  var wide = [['Mon', 'Dink Raise', 3, 10, 10, 15]];   // the row's own range decides, not a global number
+  check('rollover: own rep range 10-15: 13 reps holds, +1 rep',
+    [cell(nextWeek(wide, [logRow(1, 'Mon', 'Dink Raise', 10, [13, 13, 13])]), 'REC_WEIGHT'), cell(nextWeek(wide, [logRow(1, 'Mon', 'Dink Raise', 10, [13, 13, 13])]), 'REP_TARGET')], [10, 14]);
+  var wideUp = nextWeek(wide, [logRow(1, 'Mon', 'Dink Raise', 10, [15, 15, 15])]);
+  check('rollover: own rep range 10-15: 15 reps -> weight up, reps reset to 10', [cell(wideUp, 'REC_WEIGHT'), cell(wideUp, 'REP_TARGET')], [12.5, 10]);
 
   // 15 lb x 15 = 225 volume; 20 lb -> 11.25 reps
   check('volume match 15x15 at 20 lb -> 11 reps', matchReps(15, 15, 20, 13), 11);
   check('bump: 5% rounds to zero -> min 2.5', [bumpedWeight(15), bumpedWeight(20), bumpedWeight(40)], [17.5, 22.5, 42.5]);
   check('bump: 5% of 100 -> 5, 60 -> 2.5 step', [bumpedWeight(100), bumpedWeight(60), bumpedWeight(150)], [105, 62.5, 157.5]);
-  check('increase carries volume: 15x15 -> 17.5 lb at 13 reps', [cell(up, 'REC_WEIGHT'), cell(up, 'REP_TARGET')], [17.5, 13]);
+  check('increase resets reps: 15 lb -> 17.5 lb at Rep Min 8', [cell(up, 'REC_WEIGHT'), cell(up, 'REP_TARGET')], [17.5, 8]);
   check('increase: matched reps capped at ceiling', matchReps(100, 15, 105, 13), 13);
 
   // Overriding the weight recalculates reps
@@ -136,7 +144,7 @@ function runPureTests() {
   check('rollover: skipped last week repeats latest weight/reps',
     [cell(carried, 'REC_WEIGHT'), cell(carried, 'REP_TARGET'), carried.summary.carry.length], [20, 10, 1]);
   check('rollover: latest week wins over older',
-    cell(nextWeek(prog, [logRow(1, 'Mon', 'Zork Curl', 15, [10, 10, 10]), logRow(2, 'Mon', 'Zork Curl', 17.5, [12, 12, 12])], 2), 'REC_WEIGHT'), 17.5);
+    cell(nextWeek(prog, [logRow(1, 'Mon', 'Zork Curl', 15, [10, 10, 10]), logRow(2, 'Mon', 'Zork Curl', 17.5, [11, 11, 11])], 2), 'REC_WEIGHT'), 17.5);
   check('rollover: same exercise on two days tracked separately',
     nextWeek([['Mon', 'Zork Curl', 3, 15, '', ''], ['Wed', 'Zork Curl', 3, 15, '', '']],
       [logRow(1, 'Mon', 'Zork Curl', 20, [15, 15, 15]), logRow(1, 'Wed', 'Zork Curl', 20, [8, 8, 8])])

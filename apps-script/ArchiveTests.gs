@@ -78,31 +78,36 @@ function runArchiveTests() {
   check('mesoComplete: past the end -> yes', done(7, 6, true, false), true);
 
   // Program start weights
+  var rr = { repMin: 8, repMax: 12 };   // Settings defaults
   var prog = [['Mon', 'Zork Curl', 3, 15, 8, 12], ['Tue', 'Wibble Press', 3, 40, 8, 12], ['', '', '', '', '', ''], ['Wed', 'Zork Curl', 3, 15, 8, 12]];
   var logs = [logRow(1, 'Mon', 'Zork Curl', 20, [10], {}), logRow(2, 'Mon', 'Zork Curl', 22.5, [10], {}),
     logRow(3, 'Mon', 'Zork Curl', 10, [8], { FLAGS: DL })];
-  var sw = planProgramStartWeights(prog, logs);
+  var sw = planProgramStartWeights(prog, logs, rr);
   check('start weights: last working weight (deload ignored), others keep theirs', sw.column, [[22.5], [40], [''], [15]]);
   check('start weights: updated list', sw.updated, ['Zork Curl']);
-  var sw2 = planProgramStartWeights([['Mon', 'Zork Curl', 3, 15, 8, 12], ['Mon', 'Zork Curl', 3, 15, 8, 12]], logs);
+  var sw2 = planProgramStartWeights([['Mon', 'Zork Curl', 3, 15, 8, 12], ['Mon', 'Zork Curl', 3, 15, 8, 12]], logs, rr);
   check('start weights: duplicate Program rows both update, listed once', [sw2.column, sw2.updated], [[[22.5], [22.5]], ['Zork Curl']]);
   check('start weights: unreadable weight keeps the Program value',
-    planProgramStartWeights([['Mon', 'Zork Curl', 3, 15, 8, 12]], [logRow(1, 'Mon', 'Zork Curl', '', [10], {})]).column, [[15]]);
-  check('start weights: empty Log changes nothing', planProgramStartWeights(prog, []).column, [[15], [40], [''], [15]]);
+    planProgramStartWeights([['Mon', 'Zork Curl', 3, 15, 8, 12]], [logRow(1, 'Mon', 'Zork Curl', '', [10], {})], rr).column, [[15]]);
+  check('start weights: empty Log changes nothing', planProgramStartWeights(prog, [], rr).column, [[15], [40], [''], [15]]);
 
-  // Pending progression: the last working week hit the weight-up rep count -> start weight is the bumped one
-  var bumpProg = [['Mon', 'Zork Curl', 3, 15, 8, 12], ['Tue', 'Wibble Press', 3, 40, 8, 12], ['Wed', 'Plonk Row', 3, 30, 8, 12], ['Thu', 'Quux Fly', 3, 20, 8, 12]];
+  // Pending progression: the last working week reached the row's Rep Max -> start weight is the bumped one
+  var bumpProg = [['Mon', 'Zork Curl', 3, 15, 8, 12], ['Tue', 'Wibble Press', 3, 40, 8, 12], ['Wed', 'Plonk Row', 3, 30, 8, 12],
+    ['Thu', 'Quux Fly', 3, 20, 8, 12], ['Fri', 'Dink Raise', 3, 10, 10, 15]];
   var bumpLogs = [
-    logRow(1, 'Tue', 'Wibble Press', 100, [15, 15, 15], {}),                                   // earlier week, skipped since: no bump
-    logRow(2, 'Mon', 'Zork Curl', 100, [15, 15, 15], {}),                                      // last week, 15 reps: 100 -> 105
-    logRow(2, 'Wed', 'Plonk Row', 60, [15, 15, 15], { TENDON: FEEDBACK.tendonBad }),           // maintenance: weight held
-    logRow(2, 'Thu', 'Quux Fly', 25, [14, 14, 14], {})];                                       // 14 reps: below the bump threshold
-  var sb = planProgramStartWeights(bumpProg, bumpLogs);
-  check('start weights: 15+ reps in the last working week -> bumped; earlier-week, maintenance and 14-rep rows keep their weight',
-    [sb.column, sb.updated, sb.bumped], [[[105], [100], [60], [25]], ['Zork Curl', 'Wibble Press', 'Plonk Row', 'Quux Fly'], ['Zork Curl']]);
-  check('start weights: a 15-rep deload week does not bump',
+    logRow(1, 'Tue', 'Wibble Press', 100, [12, 12, 12], {}),                           // earlier week, skipped since: no bump
+    logRow(2, 'Mon', 'Zork Curl', 100, [12, 12, 12], {}),                              // last week, Rep Max 12 reached: 100 -> 105
+    logRow(2, 'Wed', 'Plonk Row', 60, [12, 12, 12], { TENDON: FEEDBACK.tendonBad }),   // maintenance: weight held
+    logRow(2, 'Thu', 'Quux Fly', 25, [11, 11, 11], {}),                                // 11 reps: below Rep Max 12
+    logRow(2, 'Fri', 'Dink Raise', 40, [13, 13, 13], {})];                             // 13 reps: below its own Rep Max 15
+  var sb = planProgramStartWeights(bumpProg, bumpLogs, rr);
+  check('start weights: Rep Max reached in the last working week -> bumped; earlier-week, maintenance and below-Rep-Max rows keep their weight',
+    [sb.column, sb.updated, sb.bumped],
+    [[[105], [100], [60], [25], [40]], ['Zork Curl', 'Wibble Press', 'Plonk Row', 'Quux Fly', 'Dink Raise'], ['Zork Curl']]);
+  check('start weights: a Rep Max deload week does not bump',
     planProgramStartWeights([['Mon', 'Zork Curl', 3, 15, 8, 12]],
-      [logRow(1, 'Mon', 'Zork Curl', 100, [10, 10], {}), logRow(2, 'Mon', 'Zork Curl', 60, [15, 15], { FLAGS: DL })]).column, [[100]]);
+      [logRow(1, 'Mon', 'Zork Curl', 100, [10, 10], {}), logRow(2, 'Mon', 'Zork Curl', 60, [12, 12], { FLAGS: DL })], rr).column, [[100]]);
+
 
   return results;
 }

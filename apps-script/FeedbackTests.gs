@@ -38,10 +38,10 @@ function runFeedbackTests() {
   check('pump: blank counts as mid (+1)', cell(plan([logRow(1, 'Mon', 'Zork Curl', 15, [8, 8, 8])]), 'REP_TARGET'), 9);
   check('pump: rating is case/space-insensitive', cell(plan([logRow(1, 'Mon', 'Zork Curl', 15, [8, 8, 8], { PUMP: ' None ' })]), 'REP_TARGET'), 10);
   check('pump: weight held for every rating', cell(plan([logRow(1, 'Mon', 'Zork Curl', 15, [8, 8, 8], { PUMP: 'none' })]), 'REC_WEIGHT'), 15);
-  check('pump none: capped at rep ceiling', cell(plan([logRow(1, 'Mon', 'Zork Curl', 15, [12, 12, 12], { PUMP: 'none' })]), 'REP_TARGET'), 13);
-  check('pump none: weight-increase path unchanged (volume match)',
-    [cell(plan([logRow(1, 'Mon', 'Zork Curl', 15, [15, 15, 15], { PUMP: 'none' })]), 'REC_WEIGHT'),
-     cell(plan([logRow(1, 'Mon', 'Zork Curl', 15, [15, 15, 15], { PUMP: 'none' })]), 'REP_TARGET')], [17.5, 13]);
+  check('pump none: capped at Rep Max', cell(plan([logRow(1, 'Mon', 'Zork Curl', 15, [11, 11, 11], { PUMP: 'none' })]), 'REP_TARGET'), 12);
+  check('pump none: weight-increase path unchanged (reps reset to Rep Min)',
+    [cell(plan([logRow(1, 'Mon', 'Zork Curl', 15, [12, 12, 12], { PUMP: 'none' })]), 'REC_WEIGHT'),
+     cell(plan([logRow(1, 'Mon', 'Zork Curl', 15, [12, 12, 12], { PUMP: 'none' })]), 'REP_TARGET')], [17.5, 8]);
 
   // 4b: tendon
   var bad = plan([logRow(1, 'Mon', 'Zork Curl', 20, [10, 10, 10], { TENDON: 'bad' })]);
