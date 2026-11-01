@@ -4,46 +4,6 @@
  * runWeekFlowTests() is called from runPureTests() in Tests.gs; weekFlowSheetTests() from runSheetTests() with its helpers.
  */
 
-// Four-day upper/lower split, three exercises a day. [Exercise, Primary muscle, Secondary, Tertiary]
-var UPPER_LOWER_MAP = [
-  ['Barbell Bench Press', 'Chest', 'Triceps', ''], ['Chest-Supported Row', 'Back', 'Biceps', ''], ['Overhead Press', 'Shoulders', 'Triceps', ''],
-  ['Back Squat', 'Quads', 'Glutes', ''], ['Romanian Deadlift', 'Hamstrings', 'Glutes', ''], ['Standing Calf Raise', 'Calves', '', ''],
-  ['Incline Dumbbell Press', 'Chest', 'Shoulders', ''], ['Lat Pulldown', 'Back', 'Biceps', ''], ['Dumbbell Curl', 'Biceps', '', ''],
-  ['Leg Press', 'Quads', 'Glutes', ''], ['Seated Leg Curl', 'Hamstrings', '', ''], ['Hip Thrust', 'Glutes', 'Hamstrings', '']
-];
-// Program rows: Day, Exercise, Sets, Start Weight, Rep Min, Rep Max
-var UPPER_LOWER_PROGRAM = [
-  ['Mon', 'Barbell Bench Press', 4, 135, 6, 10], ['Mon', 'Chest-Supported Row', 3, 90, 8, 12], ['Mon', 'Overhead Press', 3, 75, 8, 12],
-  ['Tue', 'Back Squat', 4, 185, 5, 8], ['Tue', 'Romanian Deadlift', 3, 155, 8, 10], ['Tue', 'Standing Calf Raise', 3, 100, 10, 15],
-  ['Thu', 'Incline Dumbbell Press', 3, 50, 8, 12], ['Thu', 'Lat Pulldown', 3, 110, 8, 12], ['Thu', 'Dumbbell Curl', 3, 30, 10, 12],
-  ['Fri', 'Leg Press', 3, 270, 10, 15], ['Fri', 'Seated Leg Curl', 3, 90, 10, 15], ['Fri', 'Hip Thrust', 3, 185, 8, 12]
-];
-// One full week as a lifter might really log it: different set counts (some more or fewer than planned), reps, feedback.
-// Same order as the Program rows. reps = S1.. as done.
-var UPPER_LOWER_WEEK = [
-  { reps: [8, 8, 7, 6], rir: 2, pump: 'great', tendon: 'good', connection: 'great', soreness: 'none', notes: 'solid top set' },
-  { reps: [12, 11, 10], rir: 2, pump: 'mid', tendon: 'neutral', connection: 'good', soreness: 'mild' },
-  { reps: [10, 9, 8, 8], rir: 1, pump: 'mid', tendon: 'neutral', connection: 'good', soreness: 'mild', notes: 'added a fourth set' },
-  { reps: [6, 6, 6, 5, 5], weight: 190, rir: 2, pump: 'great', tendon: 'neutral', connection: 'good', soreness: 'none' },
-  { reps: [10, 10, 9], rir: 2, pump: 'mid', tendon: 'good', connection: 'good', soreness: 'none' },
-  { reps: [15, 15, 15], rir: 1, pump: 'great', tendon: 'neutral', connection: 'good', soreness: 'none' },
-  { reps: [10, 10, 9], rir: 2, pump: 'mid', tendon: 'neutral', connection: 'good', soreness: 'none' },
-  { reps: [12, 11, 10], rir: 2, pump: 'mid', tendon: 'neutral', connection: 'not at all', soreness: 'none' },
-  { reps: [12, 12, 11], rir: 2, pump: 'none', tendon: 'neutral', connection: 'good', soreness: 'none' },
-  { reps: [15, 14, 13], rir: 2, pump: 'great', tendon: 'neutral', connection: 'great', soreness: 'mild' },
-  { reps: [12, 12, 10], rir: 2, pump: 'mid', tendon: 'bad', connection: 'good', soreness: 'none', notes: 'tendon grumbling' },
-  { reps: [10, 10, 10, 10], rir: 2, pump: 'great', tendon: 'good', connection: 'great', soreness: 'none' }
-];
-
-/** Session cell values for one UPPER_LOWER_WEEK spec, keyed like SESSION_COLS (for h.enter). */
-function weekSpecToEntry(spec) {
-  var entry = { ACTUAL_RIR: spec.rir, PUMP: spec.pump, TENDON: spec.tendon, CONNECTION: spec.connection, SORENESS: spec.soreness };
-  spec.reps.forEach(function (n, i) { entry['S' + (i + 1)] = n; });
-  if (spec.weight !== undefined) entry.ACTUAL_WEIGHT = spec.weight;
-  if (spec.notes) entry.NOTES = spec.notes;
-  return entry;
-}
-
 function runWeekFlowTests() {
   var results = [];
   var check = function (name, actual, expected) {
@@ -81,8 +41,9 @@ function runWeekFlowTests() {
 }
 
 /**
- * Pass 10B checks against the live Sheet, called from runSheetTests() with its helpers. Swaps in the upper/lower map
- * and program, and the caller restores Program, Session, Log, Archive and Settings; the Exercise Map is restored here.
+ * Pass 10B checks against the live Sheet, called from runSheetTests() with its helpers. Both weeks come from
+ * loadSampleWeek() (SampleWeek.gs), the same loader as the Workout > Load sample week menu items. The caller restores
+ * Program, Session, Log, Archive and Settings; the Exercise Map is restored here.
  */
 function weekFlowSheetTests(ss, check, h) {
   var session = ss.getSheetByName(TABS.SESSION);
@@ -99,25 +60,17 @@ function weekFlowSheetTests(ss, check, h) {
   var C = SESSION_DAY_COLORS;
   SUMMARY_STATE.paused = true;
   try {
-    clearBody(mapSheet, MAP_HEADERS.length);
-    mapSheet.getRange(2, 1, UPPER_LOWER_MAP.length, MAP_HEADERS.length).setValues(UPPER_LOWER_MAP);
     settings.getRange(SETTINGS_ROWS.MESO_WEEKS, 2).setValue(6);
-    var start = function () {
-      weekCell.setValue(1);
-      clearBody(logSheet, LOG_HEADERS.length);
-      h.writeProgram(UPPER_LOWER_PROGRAM);
-      return h.buildAndRead();
-    };
 
     // A. Full week: every exercise done, different sets and reps, feedback on every row, logged in one Complete Week
-    var built = start();
+    var loadedFull = loadSampleWeek({ kind: 'full', interactive: false });
+    check('sample week (full): loaded, all 12 rows filled, nothing logged yet',
+      [loadedFull.ok, loadedFull.filled, logged().length, countUnlogged(ss)], [true, 12, 0, 12]);
     check('upper/lower: 4 days x 3 exercises built',
-      [built.length, built.map(function (r) { return r[SESSION_COLS.DAY - 1]; })],
-      [12, ['Mon', 'Mon', 'Mon', 'Tue', 'Tue', 'Tue', 'Thu', 'Thu', 'Thu', 'Fri', 'Fri', 'Fri']]);
+      sessionCol('DAY'), ['Mon', 'Mon', 'Mon', 'Tue', 'Tue', 'Tue', 'Thu', 'Thu', 'Thu', 'Fri', 'Fri', 'Fri']);
     check('sessions: each day is one colour block, the next day the next colour, blank below',
       [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14].map(color),
       [C[0], C[0], C[0], C[1], C[1], C[1], C[0], C[0], C[0], C[1], C[1], C[1], SESSION_BLANK_COLOR]);
-    UPPER_LOWER_WEEK.forEach(function (spec, i) { h.enter(i + 2, weekSpecToEntry(spec)); });
     var full = completeWeek({ interactive: false });
     check('full week: Complete Week ok, nothing missing', [full.ok, full.gaps.notDone, full.gaps.short], [true, [], []]);
     check('full week: no warning in the status', status().indexOf('Warning') > -1, false);
@@ -143,13 +96,9 @@ function weekFlowSheetTests(ss, check, h) {
       [at(10, 'SETS'), String(at(10, 'FLAGS')).indexOf(FEEDBACK.flags.maintain) > -1, String(at(7, 'FLAGS')).indexOf(FEEDBACK.flags.technique) > -1], [2, true, true]);
 
     // B. Incomplete week: untouched days and exercises, one short exercise. Still logged and rolled; a warning only
-    start();
-    h.enter(2, weekSpecToEntry({ reps: [8, 8, 8, 8], rir: 2 }));     // Mon: all three
-    h.enter(3, weekSpecToEntry({ reps: [12, 12, 12], rir: 2 }));
-    h.enter(4, weekSpecToEntry({ reps: [10, 10, 10], rir: 2 }));
-    h.enter(5, weekSpecToEntry({ reps: [6, 6, 6, 6], rir: 2 }));     // Tue: two of three
-    h.enter(6, weekSpecToEntry({ reps: [10, 10, 10], rir: 2 }));
-    h.enter(11, weekSpecToEntry({ reps: [15, 15], rir: 2 }));        // Fri: Leg Press with 2 of 3 sets, the rest untouched; Thu untouched
+    // Mon complete, Tue two of three, Thu skipped, Fri Leg Press 2 of 3 sets (UPPER_LOWER_PARTIAL)
+    var loadedPartial = loadSampleWeek({ kind: 'partial', interactive: false });
+    check('sample week (incomplete): loaded, 6 exercises filled, week 1', [loadedPartial.ok, loadedPartial.filled, weekCell.getValue()], [true, 6, 1]);
     var partial = completeWeek({ interactive: false });
     check('incomplete week: still ok, rolled to week 2', [partial.ok, weekCell.getValue()], [true, 2]);
     check('incomplete week: the 6 exercises with reps are logged (Mon 3, Tue 2, Fri 1)',

@@ -15,6 +15,9 @@ function onOpen() {
     .addSeparator()
     .addItem('Refresh muscle summary + trends', 'refreshSummaryNow')
     .addSeparator()
+    .addItem('Load sample week: full (copy only)', 'loadSampleWeekFull')
+    .addItem('Load sample week: incomplete (copy only)', 'loadSampleWeekIncomplete')
+    .addSeparator()
     .addItem('Run tests', 'runAllTests')
     .addItem('Run sheet tests', 'runSheetTests')
     .addToUi();
