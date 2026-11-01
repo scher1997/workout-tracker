@@ -1,7 +1,8 @@
 // In-memory stand-in for the Apps Script globals the workbook code touches
 // (SpreadsheetApp, Utilities, ScriptApp, Charts, Logger). It models cell values, number formats,
-// data validation, protections, charts and triggers; it does NOT render anything, enforce
-// validation on writes (neither does Apps Script), or fire onEdit triggers (neither do script edits).
+// data validation, protections, charts and triggers; it does NOT render anything or fire onEdit triggers
+// (script edits don't either). Validation IS enforced on script writes, as in Sheets: a rule that rejects input
+// (setAllowInvalid(false)) makes setValue/setValues throw "The data you entered in cell X violates the data validation rules".
 //
 // Fidelity choices, copied from observed Sheets behaviour:
 //  - getLastRow()/getLastColumn() count a cell that only carries a dropdown/checkbox (see SheetTests.rowsOf).
@@ -30,6 +31,25 @@ function chainable(target, names) {
   names.forEach(n => { target[n] = function () { return this; }; });
 }
 
+function a1(row, col) {
+  let letters = '';
+  for (let n = col; n > 0; n = Math.floor((n - 1) / 26)) letters = String.fromCharCode(65 + ((n - 1) % 26)) + letters;
+  return letters + row;
+}
+
+/** True if value passes the rule (blank always passes; only rules that reject input are checked). */
+function passes(value, rule) {
+  if (!rule || rule.allowInvalid || value === '') return true;
+  const [first] = rule.values;
+  switch (rule.type) {
+    case 'VALUE_IN_LIST': return first.map(String).includes(String(value));
+    case 'VALUE_IN_RANGE': return [].concat(...first.getValues()).map(String).includes(String(value));
+    case 'NUMBER_BETWEEN': return typeof value === 'number' && value >= rule.values[0] && value <= rule.values[1];
+    case 'CHECKBOX': return typeof value === 'boolean';
+    default: return true;
+  }
+}
+
 class Protection {
   constructor(type, remove) { this.type = type; this.description = ''; this.warningOnly = false; this._remove = remove; }
   setDescription(d) { this.description = d; return this; }
@@ -50,7 +70,7 @@ class ValidationBuilder {
   setHelpText(t) { this.rule.helpText = t; return this; }
   build() {
     const r = Object.assign({}, this.rule);
-    return { getCriteriaType: () => r.type, getCriteriaValues: () => r.values, getAllowInvalid: () => r.allowInvalid, getHelpText: () => r.helpText };
+    return { rule: r, getCriteriaType: () => r.type, getCriteriaValues: () => r.values, getAllowInvalid: () => r.allowInvalid, getHelpText: () => r.helpText };
   }
 }
 
@@ -84,12 +104,22 @@ class Range {
     }
     return out;
   }
-  setValue(value) { this.each(cell => { cell.v = coerce(value, cell.fmt); }); return this; }
+  write(row, col, value) {
+    const cell = this.sheet.cell(row, col);
+    const v = coerce(value, cell.fmt);
+    if (cell.dv && !passes(v, cell.dv.rule)) {
+      if (process.env.MOCK_TRACE) console.error(`rejected ${JSON.stringify(v)} in ${this.sheet.name}!${a1(row, col)}
+` + new Error().stack);
+      throw new Error(`Exception: The data you entered in cell ${a1(row, col)} violates the data validation rules set on this cell.`);
+    }
+    cell.v = v;
+  }
+  setValue(value) { this.each((cell, r, c) => this.write(r, c, value)); return this; }
   setValues(rows) {
     if (!Array.isArray(rows) || rows.length !== this.numRows) throw new Error(`The number of rows in the data does not match the number of rows in the range. The data has ${rows && rows.length} but the range has ${this.numRows}.`);
     rows.forEach((line, r) => {
       if (line.length !== this.numCols) throw new Error(`The number of columns in the data does not match the number of columns in the range. The data has ${line.length} but the range has ${this.numCols}.`);
-      line.forEach((v, c) => { const cell = this.sheet.cell(this.row + r, this.col + c); cell.v = coerce(v, cell.fmt); });
+      line.forEach((v, c) => this.write(this.row + r, this.col + c, v));
     });
     return this;
   }

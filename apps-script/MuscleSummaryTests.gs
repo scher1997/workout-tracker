@@ -277,8 +277,15 @@ function muscleSummarySheetTests(ss, check, h) {
   } finally {
     setMap(mapBackup.length ? mapBackup : [['', '', '', '']]);
     optionRows.forEach(function (r, i) { cell(r).setValue(optionBackup[i]); });
-    trends.getRange(1, L.VALUE_COL).setValue(trendBackup[0]);
-    trends.getRange(2, L.VALUE_COL).setValue(trendBackup[1]);
+    // The item dropdown rejects values outside its list, and it still lists the test exercises: rebuild it from the
+    // restored Exercise Map first. If the saved choice is no longer in the list the refresh has already picked a valid one.
+    try {
+      refreshAllSummaries(ss);
+      trends.getRange(1, L.VALUE_COL).setValue(trendBackup[0]);
+      trends.getRange(2, L.VALUE_COL).setValue(trendBackup[1]);
+    } catch (e) {
+      Logger.log('Trends choice not restored: ' + e);
+    }
     SUMMARY_STATE.paused = wasPaused;
   }
 }
