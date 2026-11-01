@@ -181,6 +181,8 @@ function runSheetTests() {
     muscleSummarySheetTests(ss, check, helpers);
     // 12. Pass 10A: Primary / Secondary / Tertiary columns, compound vs isolation counting (LogLayoutTests.gs)
     logLayoutSheetTests(ss, check, helpers);
+    // 13. Pass 10B: day-by-day Sessions tab and whole-week logging, complete and incomplete (WeekFlowTests.gs)
+    weekFlowSheetTests(ss, check, helpers);
   } catch (e) {
     check('sheet tests ran without error', String(e), '');
   } finally {

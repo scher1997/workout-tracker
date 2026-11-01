@@ -94,7 +94,14 @@ class Range {
     return this;
   }
   clearContent() { this.each(cell => { cell.v = ''; }); return this; }
-  clear() { this.each(cell => { cell.v = ''; cell.fmt = ''; cell.dv = null; }); return this; }
+  clear() { this.each(cell => { cell.v = ''; cell.fmt = ''; cell.dv = null; cell.bg = ''; }); return this; }
+  setBackground(color) { this.each(cell => { cell.bg = color || ''; }); return this; }
+  setBackgrounds(rows) {
+    if (rows.length !== this.numRows || rows.some(line => line.length !== this.numCols)) throw new Error('The background data does not match the range size.');
+    rows.forEach((line, r) => line.forEach((color, c) => { this.sheet.cell(this.row + r, this.col + c).bg = color || ''; }));
+    return this;
+  }
+  getBackground() { return this.sheet.peek(this.row, this.col).bg || '#ffffff'; }   // Sheets reports the default fill as white
   clearDataValidations() { this.each(cell => { cell.dv = null; }); return this; }
   setNumberFormat(f) { this.each(cell => { cell.fmt = f; }); return this; }
   setDataValidation(rule) { this.each(cell => { cell.dv = rule; }); return this; }
@@ -106,7 +113,7 @@ class Range {
   }
   protect() { return this.sheet.addProtection('RANGE'); }
 }
-chainable(Range.prototype, ['setFontWeight', 'setFontStyle', 'setFontSize', 'setFontColor', 'setBackground', 'setWrap',
+chainable(Range.prototype, ['setFontWeight', 'setFontStyle', 'setFontSize', 'setFontColor', 'setWrap',
   'setVerticalAlignment', 'setHorizontalAlignment', 'setBorder']);
 
 class Sheet {
@@ -115,10 +122,10 @@ class Sheet {
   }
   cell(r, c) {
     const key = r + ',' + c;
-    if (!this.cells.has(key)) this.cells.set(key, { v: '', fmt: '', dv: null });
+    if (!this.cells.has(key)) this.cells.set(key, { v: '', fmt: '', dv: null, bg: '' });
     return this.cells.get(key);
   }
-  peek(r, c) { return this.cells.get(r + ',' + c) || { v: '', fmt: '', dv: null }; }
+  peek(r, c) { return this.cells.get(r + ',' + c) || { v: '', fmt: '', dv: null, bg: '' }; }
   extent(axis) {   // last row (axis 0) or column (axis 1) holding a value or a validation
     let last = 0;
     this.cells.forEach((cell, key) => {

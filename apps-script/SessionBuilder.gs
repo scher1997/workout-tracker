@@ -167,7 +167,29 @@ function clearSession(opts) {
   if (session.getLastRow() > 1) {
     session.getRange(2, 1, session.getLastRow() - 1, SESSION_HEADERS.length).clearContent();
   }
+  paintSessionDays(session, []);
   setStatus(ss, 'Session cleared' + (hadEntries ? ' (entered data discarded).' : '.'));
+}
+
+/** Pure: one background colour per row; a day keeps its colour wherever its rows sit, the next new day takes the next colour. */
+function dayBackgrounds(days) {
+  var order = [];
+  return days.map(function (d) {
+    var key = normalizeName(d);
+    if (order.indexOf(key) === -1) order.push(key);
+    return SESSION_DAY_COLORS[(order.indexOf(key)) % SESSION_DAY_COLORS.length];
+  });
+}
+
+/** Tint the Session body by day; everything below the rows goes back to blank. */
+function paintSessionDays(session, rows) {
+  var width = SESSION_HEADERS.length;
+  if (session.getMaxRows() > 1) session.getRange(2, 1, session.getMaxRows() - 1, width).setBackground(SESSION_BLANK_COLOR);
+  if (!rows.length) return;
+  var colors = dayBackgrounds(rows.map(function (r) { return r[SESSION_COLS.DAY - 1]; }));
+  session.getRange(2, 1, rows.length, width).setBackgrounds(colors.map(function (c) {
+    return SESSION_HEADERS.map(function () { return c; });
+  }));
 }
 
 /** Replace the Session body with planned rows. */
@@ -176,6 +198,7 @@ function writeSession(session, rows) {
     session.getRange(2, 1, session.getLastRow() - 1, SESSION_HEADERS.length).clearContent();
   }
   session.getRange(2, 1, rows.length, SESSION_HEADERS.length).setValues(rows);
+  paintSessionDays(session, rows);
 }
 
 /**

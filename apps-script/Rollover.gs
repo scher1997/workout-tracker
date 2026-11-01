@@ -235,6 +235,9 @@ function completeWeek(opts) {
     return rows.some(function (r) { return parseNumber(r[SESSION_COLS.WEEK]) === settings.week; });
   };
   var pending = countUnlogged(ss);
+  var sessionLast = lastDataRow(session, SESSION_HEADERS.length);
+  var gaps = weekGaps(sessionLast > 1 ? session.getRange(2, 1, sessionLast - 1, SESSION_HEADERS.length).getValues() : []);
+  var warning = gapWarning(gaps);   // a warning only: the week is logged and rolled either way
   if (!pending && !loggedThisWeek(readLogRows(log))) {
     return refuse('Nothing logged for week ' + settings.week + ' yet. Enter reps in Session, then try again.');
   }
@@ -242,6 +245,7 @@ function completeWeek(opts) {
   if (interactive) {
     var ui = SpreadsheetApp.getUi();
     var msg = (pending ? pending + ' completed exercise(s) will be logged first.\n\n' : '')
+      + (warning ? warning + '\n\n' : '')
       + 'Build week ' + (settings.week + 1) + ' and replace the Session tab?';
     if (ui.alert('Complete week ' + settings.week + '?', msg, ui.ButtonSet.YES_NO) !== ui.Button.YES) return { ok: false, cancelled: true };
   }
@@ -260,6 +264,7 @@ function completeWeek(opts) {
   var notes = [deloadNext
     ? 'Week ' + plan.week + ' is a deload week: half sets, weight held, target RIR ' + DELOAD.rir + '.'
     : 'Week ' + plan.week + ' ready (target RIR ' + rirForWeek(settings.rirLadder, plan.week) + ').'];
+  if (warning) notes.push(warning);
   if (s.increase.length) notes.push('Weight up: ' + s.increase.join(', ') + '.');
   if (s.hold.length) notes.push(s.hold.length + ' same weight, more reps.');
   if (s.maintain.length) notes.push('Tendon maintenance (weight held, one set fewer): ' + s.maintain.join(', ') + '.');
@@ -280,5 +285,5 @@ function completeWeek(opts) {
   refreshSummarySafe(ss);
   timer.mark('summary + chart');
   timer.done();
-  return { ok: true, week: plan.week, summary: s };
+  return { ok: true, week: plan.week, summary: s, gaps: gaps };
 }

@@ -35,6 +35,9 @@ var SESSION_ENTRY_COLS = [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21];
 var SESSION_REP_COLS = [11, 12, 13, 14, 15];
 // Script-managed (warning-protected) columns.
 var SESSION_PROTECTED_COLS = [1, 2, 3, 4, 5, 7, 9, 22];
+// Row tints on Sessions: each day (in order of first appearance) gets the next colour, so a day reads as one table.
+var SESSION_DAY_COLORS = ['#e8f0fe', '#fef7e0'];
+var SESSION_BLANK_COLOR = '#ffffff';
 
 // Log and Archive split the muscle into three columns; Sessions keeps the single primary "Muscle Group" column.
 var MUSCLE_HEADERS = ['Primary Muscle', 'Secondary Muscles', 'Tertiary Muscles'];

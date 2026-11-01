@@ -40,6 +40,33 @@ function planLogRows(sessionRows, existingKeys, date, roles) {
   return out;
 }
 
+/**
+ * What a week's Session rows still lack, for the Complete Week warning.
+ * notDone: exercises with no reps (they are not logged). short: logged, but fewer sets than planned.
+ */
+function weekGaps(sessionRows) {
+  var out = { notDone: [], short: [], total: 0 };
+  sessionRows.forEach(function (r) {
+    var name = cleanName(r[SESSION_COLS.EXERCISE - 1]);
+    if (!name) return;
+    out.total++;
+    var label = (cleanName(r[SESSION_COLS.DAY - 1]) + ' ' + name).trim();
+    if (!isExerciseCompleted(r)) { out.notDone.push(label); return; }
+    var done = SESSION_REP_COLS.filter(function (c) { return parseNumber(r[c - 1]) !== null; }).length;
+    var planned = toPosInt(r[SESSION_COLS.SETS - 1], 0);
+    if (planned && done < planned) out.short.push(label + ' ' + done + '/' + planned + ' sets');
+  });
+  return out;
+}
+
+/** One warning line for weekGaps(), or '' when every programmed exercise was done in full. */
+function gapWarning(gaps) {
+  var parts = [];
+  if (gaps.notDone.length) parts.push(gaps.notDone.length + ' of ' + gaps.total + ' exercise(s) have no reps and will not be logged: ' + gaps.notDone.join(', ') + '.');
+  if (gaps.short.length) parts.push('Fewer sets than planned: ' + gaps.short.join(', ') + '.');
+  return parts.length ? 'Warning: ' + parts.join(' ') : '';
+}
+
 /** Keys of everything already in the Log tab. */
 function readLogKeys(logSheet) {
   var keys = {};

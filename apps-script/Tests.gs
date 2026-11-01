@@ -187,7 +187,7 @@ function runPureTests() {
       SETTINGS_ROWS.TERTIARY_WEIGHT - SETTINGS_ROWS.SECONDARY_WEIGHT], [1, 1, 1]);
   check('settings: migration only moves keys the new layout has',
     Object.keys(LEGACY_SETTINGS_ROWS).concat(Object.keys(PASS8_SETTINGS_ROWS)).filter(function (k) { return SETTINGS_ROWS[k] === undefined; }), []);
-  return results.concat(runFeedbackTests(), runDeloadTests(), runArchiveTests(), runMuscleSummaryTests(), runLogLayoutTests());
+  return results.concat(runFeedbackTests(), runDeloadTests(), runArchiveTests(), runMuscleSummaryTests(), runLogLayoutTests(), runWeekFlowTests());
 }
 
 function runAllTests() {
