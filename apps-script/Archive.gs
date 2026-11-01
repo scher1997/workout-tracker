@@ -101,23 +101,31 @@ function archiveRows(logRows, label, overallOffset) {
 }
 
 /**
- * New Program Start Weight column: each exercise's weight from its latest working (non-deload) Log entry.
+ * New Program Start Weight column: where Complete Week would have taken each exercise next, from its latest working
+ * (non-deload) Log entry. That is its last weight, raised by a progression bump when the last working week hit
+ * PROGRESSION.increaseAtReps. An exercise last logged in an earlier week, or on maintenance (tendon), keeps its weight.
  * Exercises with no usable entry (and spacer rows) keep their current value.
- * Returns {column: [[weight], ...] one per Program row, updated: [exercise names]}.
+ * Returns {column: [[weight], ...] one per Program row, updated: [exercise names], bumped: [exercise names raised]}.
  */
 function planProgramStartWeights(progRows, logRows) {
-  var latest = latestEntries(withoutDeload(logRows), Infinity);
-  var updated = [], seen = {};
+  var working = withoutDeload(logRows);
+  var latest = latestEntries(working, Infinity);
+  var lastWeek = 0;
+  working.forEach(function (r) { lastWeek = Math.max(lastWeek, parseNumber(r[SESSION_COLS.WEEK]) || 0); });
+  var updated = [], bumped = [], seen = {};
   var column = progRows.map(function (r) {
     var exercise = cleanName(r[1]);
     var key = overrideKey(r[0], exercise);
     var found = exercise ? latest[key] : null;
     var weight = found ? parseNumber(found.row[SESSION_COLS.ACTUAL_WEIGHT]) : null;
     if (weight === null || weight <= 0) return [r[3]];
-    if (!seen[key]) { seen[key] = true; updated.push(exercise); }
+    var next = nextTarget(found.row, { min: 1, max: 1 }, found.week < lastWeek);   // only its weight is used here
+    var raised = next && next.action === 'increase';
+    if (raised) weight = next.weight;
+    if (!seen[key]) { seen[key] = true; updated.push(exercise); if (raised) bumped.push(exercise); }
     return [weight];
   });
-  return { column: column, updated: updated };
+  return { column: column, updated: updated, bumped: bumped };
 }
 
 /**
@@ -159,7 +167,7 @@ function startNewMesocycle(opts) {
     var ui = SpreadsheetApp.getUi();
     var msg = (early ? 'This mesocycle is not finished (week ' + settings.week + ' of ' + settings.mesoWeeks + ').\n\n' : '')
       + (pending ? pending + ' completed exercise(s) will be logged first.\n\n' : '')
-      + 'Archive Log as "' + label + '", set Program start weights to the last working weights, '
+      + 'Archive Log as "' + label + '", set Program start weights to where the last working week was heading, '
       + 'clear Log, reset to week 1 as "' + nextMesoName(label) + '" and rebuild Session?';
     if (ui.alert('Start a new mesocycle?', msg, ui.ButtonSet.YES_NO) !== ui.Button.YES) return { ok: false, cancelled: true };
   }
@@ -200,7 +208,8 @@ function startNewMesocycle(opts) {
 
   var span = rows[0][ARCHIVE_COLS.OVERALL_WEEK - 1] + '–' + rows[rows.length - 1][ARCHIVE_COLS.OVERALL_WEEK - 1];
   var notes = ['Archived ' + rows.length + ' rows as "' + label + '" (overall weeks ' + span + ').',
-    'Program start weights updated for ' + weights.updated.length + ' exercise(s).',
+    'Program start weights updated for ' + weights.updated.length + ' exercise(s)'
+      + (weights.bumped.length ? ', ' + weights.bumped.length + ' raised a step (' + weights.bumped.join(', ') + ')' : '') + '.',
     'Now "' + next + '", week 1 built.'];
   if (early) notes.push('(Ended early.)');
   setStatus(ss, notes.join(' '));
