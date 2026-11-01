@@ -14,6 +14,10 @@ The old Python tracker was removed in Pass 11 (it is in git history before that 
   Run sheet tests 1 of 2 and 2 of 2 (the whole suite exceeds Apps Script's 6-minute limit, and a
   killed run never restores the user's data). Report both counts before calling a pass done.
   Timing per section goes to the Executions log. `run-sheet-tests.js --part=1|2` runs one half.
+- The sheet tests overwrite Program, Session, Log, Archive, Exercise Map and Settings. They first save a
+  backup to a hidden "Test Backup" tab (TestBackup.gs); a normal run restores and deletes it, and the
+  next run restores from it if the previous one was killed. Never run them on a workbook without that tab logic.
+- Ideas not scheduled: docs/aspirations.md.
 - New `.gs` file: add it to `gs-tests/gs-files.js` (shared by both runners).
 
 ## Session start

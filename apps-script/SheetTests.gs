@@ -37,21 +37,24 @@ function runSheetTests(part) {
 
   var session = ss.getSheetByName(TABS.SESSION);
   var program = ss.getSheetByName(TABS.PROGRAM);
+
+  // An earlier run killed by the time limit never restored: put its backup back before anything else.
+  var leftover = loadTestBackup(ss);
+  if (leftover) {
+    restoreTestBackup(ss, leftover);
+    dropTestBackup(ss);
+    var note = 'A previous sheet-test run did not finish. Your data was restored from its backup (saved '
+      + new Date(leftover.at).toLocaleString() + ').';
+    Logger.log(note);
+    ss.toast(note, 'Sheet tests', 10);
+  }
+
   if (part !== 2) structureSheetTests(ss, check);
   lap('structure');
 
-  // Back up user data, then run build tests on a clean slate
-  var progBackup = rowsOf(program, PROGRAM_HEADERS.length);
-  var sessBackup = rowsOf(session, SESSION_HEADERS.length);
-  var logSheet = ss.getSheetByName(TABS.LOG);
-  var logBackup = rowsOf(logSheet, LOG_HEADERS.length);
-  var settingsSheet = ss.getSheetByName(TABS.SETTINGS);
-  var weekBackup = settingsSheet.getRange(SETTINGS_ROWS.WEEK, 2).getValue();
-  var mesoBackup = settingsSheet.getRange(SETTINGS_ROWS.MESO_WEEKS, 2).getValue();
-  var deloadAtEndBackup = settingsSheet.getRange(SETTINGS_ROWS.DELOAD_AT_END, 2).getValue();
-  var nameBackup = settingsSheet.getRange(SETTINGS_ROWS.MESO_NAME, 2).getValue();
-  var archiveSheet = ss.getSheetByName(TABS.ARCHIVE);
-  var archiveBackup = archiveSheet ? rowsOf(archiveSheet, ARCHIVE_HEADERS.length) : [];
+  // Back up user data (in memory and in the hidden Test Backup tab), then run build tests on a clean slate
+  var backup = captureTestBackup(ss);
+  saveTestBackup(ss, backup);
   SUMMARY_STATE.paused = true;   // keep the earlier sections fast; the Muscle Summary section turns it back on
   try {
     var mapRows = rowsOf(ss.getSheetByName(TABS.MAP), 2).filter(function (r) { return r[0] && r[1]; });
@@ -112,24 +115,11 @@ function runSheetTests(part) {
   } catch (e) {
     check('sheet tests ran without error', String(e), '');
   } finally {
-    // Restore the user's own data
-    settingsSheet.getRange(SETTINGS_ROWS.WEEK, 2).setValue(weekBackup);
-    settingsSheet.getRange(SETTINGS_ROWS.MESO_WEEKS, 2).setValue(mesoBackup);
-    settingsSheet.getRange(SETTINGS_ROWS.DELOAD_AT_END, 2).setValue(deloadAtEndBackup);
-    settingsSheet.getRange(SETTINGS_ROWS.MESO_NAME, 2).setValue(nameBackup);
-    if (archiveSheet) {
-      clearBody(archiveSheet, ARCHIVE_HEADERS.length);
-      if (archiveBackup.length) archiveSheet.getRange(2, 1, archiveBackup.length, ARCHIVE_HEADERS.length).setValues(archiveBackup);
-    }
-    clearBody(program, PROGRAM_HEADERS.length);
-    if (progBackup.length) program.getRange(2, 1, progBackup.length, PROGRAM_HEADERS.length).setValues(progBackup);
-    clearBody(logSheet, LOG_HEADERS.length);
-    if (logBackup.length) logSheet.getRange(2, 1, logBackup.length, LOG_HEADERS.length).setValues(logBackup);
-    clearBody(session, SESSION_HEADERS.length);
-    if (sessBackup.length) session.getRange(2, 1, sessBackup.length, SESSION_HEADERS.length).setValues(sessBackup);
-    paintSessionDays(session, sessBackup);   // the tests' day tints must not outlive the rows they were painted for
+    // Restore the user's own data; the backup tab goes only after the restore went through (a throw leaves it for the next run)
+    restoreTestBackup(ss, backup);
     SUMMARY_STATE.paused = false;
     refreshSummarySafe(ss);   // the summary follows the restored Log / Archive / Exercise Map
+    dropTestBackup(ss);
     lap('restore');
   }
 

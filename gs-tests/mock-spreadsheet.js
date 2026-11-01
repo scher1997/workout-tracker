@@ -194,6 +194,8 @@ class Sheet {
     this.maxCols += n;
     return this;
   }
+  hideSheet() { this.hiddenSheet = true; return this; }
+  isSheetHidden() { return !!this.hiddenSheet; }
   setFrozenRows(n) { this.frozenRows = n; return this; }
   setFrozenColumns(n) { this.frozenCols = n; return this; }
   getFrozenColumns() { return this.frozenCols || 0; }
@@ -244,6 +246,7 @@ class Spreadsheet {
     return sh;
   }
   deleteSheet(sh) { this.sheets = this.sheets.filter(s => s !== sh); }
+  getActiveSheet() { return this.active; }
   setActiveSheet(sh) { this.active = sh; return sh; }
   moveActiveSheet(pos) {
     this.sheets = this.sheets.filter(s => s !== this.active);
