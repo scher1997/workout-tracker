@@ -102,6 +102,9 @@ var SETTINGS_ACTIONS = {
   NONE: 'Choose action', BUILD: 'Build Session', WEEK: 'Complete Week', CLEAR: 'Clear Session',
   DELOAD: 'Deload this week', SUMMARY: 'Refresh Muscle Summary', NEW_MESO: 'Start New Mesocycle'
 };
+// How long a second Action pick waits for the script lock before it gives up with "Busy, try again" (ms).
+var ACTION_LOCK_WAIT_MS = 5000;
+var ACTION_BUSY_STATUS = 'Busy, try again';
 // Row of each persistent value in older layouts; setup moves them to SETTINGS_ROWS once.
 // Pre-Pass-8: one list with header "Setting". Pass 8: three tables with a checkbox per action.
 var LEGACY_SETTINGS_ROWS = {

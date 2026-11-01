@@ -222,20 +222,32 @@ function onSettingsEdit(e) {
   runSettingsAction(r);
 }
 
-/** Reset the Action cell first (so the phone shows it done), say it started, then run the picked action. */
+/**
+ * Reset the Action cell first (so the phone shows it done), then run the picked action under the script lock:
+ * two overlapping picks must not both log or roll the week. No lock within ACTION_LOCK_WAIT_MS -> Status says busy.
+ */
 function runSettingsAction(r) {
   var A = SETTINGS_ACTIONS;
   var picked = String(r.getValue());
   if (picked === A.NONE || picked === '') return;
   r.setValue(A.NONE);
   var ss = r.getSheet().getParent();
-  setStatus(ss, 'Working: ' + picked + ' ...');
-  SpreadsheetApp.flush();
-  if (picked === A.BUILD) buildSession({ interactive: false });
-  else if (picked === A.CLEAR) clearSession({ interactive: false });
-  else if (picked === A.WEEK) completeWeek({ interactive: false });
-  else if (picked === A.DELOAD) makeDeloadWeek();
-  else if (picked === A.NEW_MESO) startNewMesocycle({ interactive: false });
-  else if (picked === A.SUMMARY) refreshSummaryNow();
-  else setStatus(ss, 'Unknown action: ' + picked);
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(ACTION_LOCK_WAIT_MS)) {
+    setStatus(ss, ACTION_BUSY_STATUS);
+    return;
+  }
+  try {
+    setStatus(ss, 'Working: ' + picked + ' ...');
+    SpreadsheetApp.flush();
+    if (picked === A.BUILD) buildSession({ interactive: false });
+    else if (picked === A.CLEAR) clearSession({ interactive: false });
+    else if (picked === A.WEEK) completeWeek({ interactive: false });
+    else if (picked === A.DELOAD) makeDeloadWeek();
+    else if (picked === A.NEW_MESO) startNewMesocycle({ interactive: false });
+    else if (picked === A.SUMMARY) refreshSummaryNow();
+    else setStatus(ss, 'Unknown action: ' + picked);
+  } finally {
+    lock.releaseLock();
+  }
 }

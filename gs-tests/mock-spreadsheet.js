@@ -300,9 +300,22 @@ function createMockEnv() {
       return b;
     }
   };
+  // Script lock: set lockState.busy = true to make tryLock fail like a second overlapping execution.
+  const lockState = { busy: false, held: 0, acquired: 0, released: 0, lastWaitMs: null };
+  const LockService = {
+    getScriptLock: () => ({
+      tryLock: ms => {
+        lockState.lastWaitMs = ms;
+        if (lockState.busy || lockState.held) return false;
+        lockState.held = 1; lockState.acquired++;
+        return true;
+      },
+      releaseLock: () => { lockState.held = 0; lockState.released++; }
+    })
+  };
   const Charts = { ChartType: { COLUMN: 'COLUMN', LINE: 'LINE' } };
   const Logger = { log: msg => { logs.push(String(msg)); } };
-  return { ss, triggers, logs, globals: { SpreadsheetApp, ScriptApp, Charts, Logger, Utilities: { formatDate } } };
+  return { ss, triggers, logs, lockState, globals: { SpreadsheetApp, ScriptApp, LockService, Charts, Logger, Utilities: { formatDate } } };
 }
 
 module.exports = { createMockEnv };

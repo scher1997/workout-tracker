@@ -31,6 +31,33 @@ const leftover = [];
 const sessions = env.ss.getSheetByName('Sessions');
 for (let r = 2; r <= 20; r++) if (sessions.getRange(r, 1).getBackground() !== '#ffffff') leftover.push(r);
 check('after the tests: no day tint left on Sessions rows that are empty again', leftover, []);
+
+// Script lock around the Settings action dispatch (runner-only: the real Sheet cannot simulate a second execution).
+const settingsSheet = env.ss.getSheetByName('Settings');
+const actionRow = run('SETTINGS_ROWS.ACTION'), statusRow = run('SETTINGS_ROWS.STATUS'), weekRow = run('SETTINGS_ROWS.WEEK');
+const pick = name => {
+  settingsSheet.getRange(actionRow, 2).setValue(name);
+  run('runSettingsAction(SpreadsheetApp.getActive().getSheetByName(TABS.SETTINGS).getRange(SETTINGS_ROWS.ACTION, 2))');
+};
+const status = () => String(settingsSheet.getRange(statusRow, 2).getValue());
+const weekBefore = settingsSheet.getRange(weekRow, 2).getValue();
+const lock = env.lockState;
+const acquiredBefore = lock.acquired;
+lock.busy = true;
+pick('Complete Week');
+lock.busy = false;
+check('lock busy: Status says Busy, try again', status(), 'Busy, try again');
+check('lock busy: action did not run, week unchanged, cell reset',
+  [settingsSheet.getRange(weekRow, 2).getValue(), settingsSheet.getRange(actionRow, 2).getValue(), lock.acquired], [weekBefore, 'Choose action', acquiredBefore]);
+check('lock busy: waited the configured time for the lock', lock.lastWaitMs, run('ACTION_LOCK_WAIT_MS'));
+pick('Refresh Muscle Summary');
+check('lock free: action runs, lock taken and released', [status() !== 'Busy, try again', lock.acquired, lock.released, lock.held], [true, acquiredBefore + 1, lock.released, 0]);
+run('var realRefreshSummaryNow = refreshSummaryNow; refreshSummaryNow = function () { throw new Error("boom"); }');
+let thrown = '';
+try { pick('Refresh Muscle Summary'); } catch (e) { thrown = e.message; }
+run('refreshSummaryNow = realRefreshSummaryNow');
+check('lock: released even when the action throws', [thrown, lock.held], ['boom', 0]);
+
 const all = results.concat(sheetResults);
 const failed = all.filter(r => !r.pass);
 failed.forEach(r => console.log('FAIL ' + r.name + ' — ' + r.detail));
