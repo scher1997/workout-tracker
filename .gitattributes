@@ -1,0 +1,7 @@
+# Source is LF in the repo and in the working tree, whatever core.autocrlf says on this machine.
+# clasp pushes the working-tree bytes, so .claspignore patterns must not end in CR.
+* text=auto eol=lf
+*.gs text eol=lf
+*.json text eol=lf
+.clasp.json text eol=lf
+.claspignore text eol=lf
