@@ -38,8 +38,8 @@ The old Python tracker was removed in Pass 11 (it is in git history before that 
   triggers, conditional formats are stored but not evaluated.
 
 ## Docs
-- Add a line to `docs/readme-todo.md` whenever a change makes `apps-script/README.md` stale.
-  The README is rewritten once, at the end.
+- `apps-script/README.md` was rewritten in Pass 11 and describes the current behaviour. Update the
+  matching section in the same commit as any change to a rule, a menu item, a tab or the test tooling.
 
 ## File editing discipline
 - Read a file once before a sequence of edits. Plan all changes mentally, 

@@ -1,109 +1,172 @@
-# Apps Script tracker (Pass 3: Complete Week)
+# Workout Tracker (Google Sheets + Apps Script)
 
-Bound Google Sheets script. Program tab is the source of truth; `buildSession()` writes the Session tab for the current week.
+A workout logger that lives in one Google Sheet and works from a phone. You plan the program once; each week the script
+builds a **Sessions** tab, you fill it in while training, and **Complete Week** logs it and builds the next week with
+the progression rules applied. Everything is a bound Apps Script (`apps-script/`), pushed with clasp.
+
+## Using it
+
+**Each week**
+1. Open the Sheet. The **Sessions** tab holds this week, one block per training day (rows tinted by day).
+   Sets, Actual RIR and Actual Weight are prefilled with the plan and shown in gray; type over only what differed.
+2. Before training, optionally pick **Soreness** for a muscle group. After each exercise pick **Pump**, **Tendon** and
+   **Connection**; an exercise counts as **done** once all three are filled in. Notes are optional.
+3. When the week is finished, pick **Complete Week**. It logs every done exercise and builds the next week.
+
+**Running actions.** Desktop: the **Workout** menu. Phone: the Sheets app does not show Apps Script menus, so use the
+**Action** dropdown at the top of the **Settings** tab (Build Session, Complete Week, Clear Session, Deload this week,
+Refresh Muscle Summary, Start New Mesocycle). The dropdown resets to "Choose action" at once, and **Status** shows
+"Working: ..." and then the result or the reason it refused. Picks run through one installable trigger
+(`onSettingsEdit`, created by Set up workbook; there should be exactly one). Offline picks run once the edit syncs.
+Two picks at once are serialised by a script lock: the second waits 5 seconds, then Status says "Busy, try again" and
+nothing runs. Phone paths never show dialogs; where the menu would ask, they refuse and say why in Status.
+
+**Complete Week** (menu "Complete week (roll to next week)")
+- Logs the whole week at once: one Log row per done exercise, keyed by week + day + exercise (never twice). A blank
+  Actual Weight logs the Rec Weight. Exercises logged with only the prefill log as shown (Actual RIR = Target RIR).
+- **Untouched** exercises only warn ("N of M were not done and will not be logged"); the rest of the week still rolls.
+  **Started but missing a rating** (you changed a set, weight, RIR, notes or a rating) stops it and names them.
+  Soreness does not count as started (it is chosen before training). Nothing logged at all also refuses, which blocks double-ticks.
+- Then it builds next week's Sessions from the Log and Program and bumps **Current week**. Program is not modified.
+- Clear Session and Build Session (phone) log done exercises first so nothing is lost; Build refuses if Sessions holds
+  entries. Start New Mesocycle and Clear refuse on started-but-unrated exercises too.
+
+## Tabs
+
+| Tab | What it is |
+|---|---|
+| **Settings** | Actions (Current week, Status, Action dropdown), Program setup (Mesocycle name and length, Target RIR by week, default rep min/max), Preferences (Deload after last week, count secondary / tertiary muscles and their credit per set). Rows live in `SETTINGS_ROWS`; code only uses the names. |
+| **Program** | You edit this: Day, Exercise, Sets, Start Weight, Rep Min, Rep Max (blank rep cells use the Settings defaults). The source of truth for what a week contains. |
+| **Exercise Map** | Exercise to **Muscle Group** (primary), optional **Secondary** and **Tertiary** muscles (comma lists). No exercise or muscle names live in code: add a row, or a new muscle group, and everything follows. |
+| **Sessions** | The current week. Exercise is the one frozen column; Week, Day, Rep Range and Rep Target are hidden (still in the data; unhide from the column header, Set up workbook hides them again). Script-managed columns are warning-protected. |
+| **Log** | One row per logged exercise: Date, Week, Day, Exercise, Primary / Secondary / Tertiary muscle, then the Sessions columns. Secondary / tertiary are copied from the map when logged. |
+| **Archive** | Long-term, chart-ready view across mesocycles (below). |
+| **Muscle Summary** | Sets per muscle group per week (below). Script-written. |
+| **Trends** | Pick an item and a metric, get a chart (below). |
+
+## Progression and feedback rules
+
+Numbers are in `PROGRESSION`, `FEEDBACK`, `DELOAD` and `DEFAULTS` (Config.gs). "Reps" = the average over the sets entered.
+
+- **Double progression** (`nextTarget`, Rollover.gs), per exercise, with that row's own Rep Range:
+  average reps at or above **Rep Max** -> weight +5% (rounded to 2.5 lb, at least +2.5) and the rep target resets to **Rep Min**;
+  below it -> weight held, rep target +1 (+2 after a "none" pump), capped at Rep Max.
+  An exercise skipped this week repeats its latest logged weight and reps; one never logged starts at the Program Start Weight.
+- **Target RIR** comes from the Settings ladder by *working* week (default 3, 2, 1, 0; weeks past the end repeat the last).
+- **Rec Weight override.** Typing a different Rec Weight in Sessions recalculates Rep Target so weight x reps matches last
+  week's logged volume (capped at Rep Max), and moves prefilled sets and an untouched Actual Weight with it.
+- **Pump**: great / mid -> +1 rep, none -> +2 (on the hold path). **Tendon** "bad" -> maintenance next week: weight held,
+  Program sets minus 1, no rep push, no increase (ends after one neutral / good week). **Connection** "not at all" ->
+  "Technique check" flag; twice in a row -> "Swap suggested". **Soreness** "still sore" (per muscle group per day) -> that
+  session's Target RIR one step easier, the rating spreads to rows with the same Day + muscle, sets never change; still
+  sore two weeks running -> "Under-recovered, consider trimming a set". Blank ratings count as neutral. Messages land in
+  the **Flags** column.
+
+## Deload and mesocycle length
+
+- **Mesocycle length counts working weeks** (default 7). A deload week uses neither a week of that length nor a step of
+  the RIR ladder: after a deload at week 3 the next working week takes the RIR step the deload replaced, and the
+  mesocycle still gets its full count of working weeks. Statuses say "working week x of N".
+- A **deload week** = half the Program sets (rounded up), weight held, reps = last performed, Target RIR 4, flag
+  "Deload week". It is derived from the Log (a week is a deload if its rows carry the flag); nothing else is stored.
+- **Stalled**: no weight or rep gain for 3 logged weeks in a row (maintenance weeks are skipped, counting restarts after a
+  deload) -> "Stalled N weeks" flag. When at least half the logged exercises (minimum 2) are stalled, the Complete Week
+  status says "Deload recommended"; it never converts anything itself.
+- **Deload this week** (menu "Make this week a deload", or the Action dropdown) rewrites the current, not-yet-started week
+  from Log history up to last week. Refuses if Sessions has entries or is already a deload. After a deload, progression
+  resumes from the last working week.
+- **End of the mesocycle.** With **Deload after last week** on (default), completing the last working week builds the next
+  week as a deload, and completing that deload ends the mesocycle (Complete Week refuses; use Start New Mesocycle).
+  With it off, completing the last working week ends it.
+
+## Archive and new mesocycle
+
+**Start New Mesocycle** (menu, or the Action dropdown): logs done exercises, appends to Archive and verifies the row
+count, raises Program > Start Weight with the same rule as progression (an exercise whose average reached its Rep Max
+goes up a step; the status lists them; deloads are ignored; unlogged exercises keep theirs), clears Sessions and Log,
+advances **Mesocycle name** ("Meso 1" -> "Meso 2"), sets Current week to 1 and builds week 1. The Log is cleared only
+after the Archive copy checks out, and Archive refuses a label it already holds, so a double pick cannot duplicate rows.
+The phone only runs it once the mesocycle is finished; the menu can end an unfinished one after a confirmation.
+
+**Archive** has one row per exercise per day per week: Mesocycle, Meso Week, **Overall Week** (keeps counting across
+mesocycles, a time axis), Date (the week's earliest logged date), Week Type (Working / Deload), Day, Exercise, the three
+muscle columns, Sets Done, Weight, Avg Reps, **Volume** (weight x total reps), Target RIR, Actual RIR, the four ratings and
+Flags. Notes and the raw S1-S5 reps stay out.
+
+## Muscle Summary and Trends
+
+- **Muscle Summary**: rows = muscle groups (every name in the Exercise Map's three muscle columns), columns = Overall
+  Week, cells = **sets actually done**, plus a Total row; darker green = more sets. Data = Archive + the current Log, so
+  weeks keep counting after a new mesocycle. The muscle comes from the Exercise Map when the summary refreshes (editing
+  the map fixes old rows); an exercise no longer in the map keeps the muscle on its Log row; anything unknown gets its own
+  last row so totals always add up.
+- **Counting**: primary counts 1. Tick *Count secondary / tertiary muscles* in Settings and set the credit per set
+  (defaults 0.5 and 0.25; 1 = a full set each). A muscle named in several roles of one exercise counts once, at the highest
+  role switched on. A caption under the table says what is counted.
+- **Trends**: pick an item in B1 (*Muscle: x* or *Exercise: x*) and a metric in B2 (Sets, Volume, Top weight, Avg reps).
+  Muscles only have Sets and Volume (other metrics fall back to Sets with a note). Chart below, data in J:K, item list in M.
+- **Refresh** is automatic after Complete Week and Start New Mesocycle, and when you edit the Exercise Map, the Settings
+  preferences or the Trends dropdowns. Manual: menu "Refresh muscle summary + trends" or the Action dropdown. A refresh
+  error is logged and never blocks logging.
+
+## Setup and upgrading
+
+```
+cd projects/04-workout-tracker
+clasp push --force        # first time: clasp login, then clasp create --type sheets --title "Workout Tracker" --rootDir apps-script
+```
+Then open the Sheet and run **Workout > Set up workbook** (authorize once). It is idempotent and never wipes data:
+creates missing tabs, headers, dropdowns, number-only validation (so the phone shows the number pad), protection, hiding of
+the four Sessions columns and the phone trigger; seeds an empty Program from the Exercise Map; and migrates older
+layouts in place (single-list or tick-box Settings, the old *Session* tab name, the Log / Archive muscle columns).
+Run it after every push that changes layout. `.claspignore` pushes only `*.gs` and `appsscript.json`.
+
+## Testing
+
+| What | How |
+|---|---|
+| Pure logic (rules, planning, layout, serialising) | `node gs-tests/run-node.js`, or **Workout > Run tests** |
+| The whole Sheet flow on an in-memory SpreadsheetApp mock | `node gs-tests/run-sheet-tests.js` (`--verbose` for script logs, `MOCK_TRACE=1` for the cell and stack of a rejected write, `--part=1` / `--part=2` for one half) |
+| The same flow on the real Sheet | **Workout > Run sheet tests 1 of 2**, then **2 of 2** |
+
+Node lives at `C:\Program Files\nodejs`. A new `.gs` file must be added to `gs-tests/gs-files.js`. The mock enforces data
+validation like Sheets does; it does not render charts, enforce protection, or fire onEdit triggers. The full in-Sheet suite
+is about 8,000 Sheets calls and passes Apps Script's 6-minute limit, so it runs in two halves (section times go to
+Extensions > Apps Script > Executions). At Pass 11: pure 301, in-Sheet 107 + 62 = 169, mock 184 (the extra 15 are checks only
+the runner can do: setup, the action lock, recovery of a killed run).
+
+**The sheet tests overwrite Program, Sessions, Log, Archive, Exercise Map and Settings.** Before touching anything they save
+a backup to a hidden **Test Backup** tab; a normal run restores from memory and deletes the tab, and the next run restores
+from the tab first if the previous run was killed. **Load sample week** (menu) also replaces Map, Program, Sessions and Log
+with no backup: use it on a copy of the workbook only.
 
 ## Files
+
 | File | Role |
 |---|---|
-| `Config.gs` | Constants: tab names, headers, RIR ladder, dropdown lists |
-| `Setup.gs` | `setupWorkbook()`, menu, validation, protection, phone trigger |
-| `SessionBuilder.gs` | `planSessionRows()` (pure) and `buildSession()` (sheet I/O) |
-| `Logger.gs` | `planLogRows()` (pure) and `completeSession()` (appends completed Sessions rows to Log; run by Complete Week, no menu item or button of its own) |
-| `Rollover.gs` | Progression rules, `planNextWeek()` (pure) and `completeWeek()`; Rec Weight edit hook |
+| `Config.gs` | Constants only: tabs, headers, Settings rows, rules, dropdown lists |
+| `Utils.gs` | Name / number helpers, `stageTimer`, `withSummaryPaused` |
+| `Setup.gs` | Menu, `setupWorkbook()`, protection, phone trigger, `onSettingsEdit` and the locked action dispatch |
+| `SettingsLayout.gs` | Settings tab layout, migration from older layouts |
+| `SessionBuilder.gs` | `planSessionRows()` (pure), `buildSession()`, `readSettings()` |
+| `SessionLayout.gs` | Prefill, done / started rules, Sessions look (tints, frozen and hidden columns, gray defaults) |
+| `Logger.gs` | `planLogRows()`, `weekGaps()`, `completeSession()` (internal: Complete Week, New Mesocycle, phone Clear / Build call it) |
+| `LogLayout.gs` | Log sheet layout vs the code row (`[Date, ...Sessions, Secondary, Tertiary]`) |
+| `Rollover.gs` | Progression rules, `planNextWeek()` (pure), `completeWeek()`, Rec Weight edit hook |
 | `Feedback.gs` | Pump, tendon, connection and soreness rules |
-| `Deload.gs` | Stall detection, deload recommendation, deload week plan and `makeDeloadWeek()` |
+| `Deload.gs` | Stall detection, deload plan, working-week numbering, `makeDeloadWeek()` |
 | `Archive.gs` | Archive transform, start weights, `startNewMesocycle()` |
-| `MuscleSummary.gs` | Muscle Summary pivot: roles from Exercise Map, `planMuscleSummary()` (pure), `refreshSummarySafe()` |
-| `Trends.gs` | Trends dashboard: item/metric series (pure), chart, dropdown edit hook |
-| `SettingsLayout.gs` | Settings tab layout: three tables, one-time move from the old single list |
-| `Utils.gs` | Name/number helpers |
-| `Tests.gs` | `runPureTests()`, `runAllTests()` |
+| `MuscleSummary.gs` | Summary pivot, roles from the Exercise Map, `refreshSummarySafe()` |
+| `Trends.gs` | Trends series (pure), chart, dropdown hook |
+| `SampleWeek.gs` | Sample-week loader (copy only); its data also drives the week-flow tests |
+| `*Tests.gs`, `SheetBaseTests.gs`, `TestBackup.gs`, `Tests.gs` | Tests per area; `Tests.gs` collects the pure ones; `TestBackup.gs` protects your data during sheet tests |
 
-## Settings tab (layout in `SETTINGS_ROWS` / `SETTINGS_SECTIONS`, Config.gs; code in `SettingsLayout.gs`)
-Three tables, two columns (label, value), sized for a phone:
-- **ACTIONS**: Current week, Status, and one **Action** dropdown. Pick Build Session, Complete Week, Clear Session, Deload this week, Refresh Muscle Summary or Start New Mesocycle; the cell resets to "Choose action" straight away and Status shows "Working: ..." until the result replaces it. List in `SETTINGS_ACTIONS`.
-- **PROGRAM SETUP** (once per mesocycle): Mesocycle name, Mesocycle length, Target RIR by week, Default rep min / max.
-- **PREFERENCES**: Deload after last week, Count secondary / tertiary muscles, and their credit per set (checkboxes stay for these on/off options).
-Move a setting by changing its row in `SETTINGS_ROWS`; code only uses the names. Running **Set up workbook** on a Sheet with an older Settings layout (single list, or Pass 8 tick boxes) carries your values over once. The Session tab is now called **Sessions** (renamed in place by Set up workbook).
-Number-only cells (weights, reps, RIR, Program sets/weights/reps, numeric Settings) have a number validation so the phone shows the number pad. Rep Range stays text.
+## Notes for changing the code
 
-## Local tests
-```
-node gs-tests/run-node.js
-```
-
-## clasp
-```
-clasp login
-clasp create --type sheets --title "Workout Tracker" --rootDir apps-script
-clasp push
-```
-Then open the Sheet and run **Workout > Set up workbook** (authorize once).
-
-## Building the Session
-- Desktop: **Workout > Build session**.
-- Phone: pick **Build Session** in the Settings Action dropdown (installable onEdit trigger). Result appears in Settings > Status.
-- Custom menus and drawing-assigned scripts are not expected to run in the iPhone Sheets app; the checkbox is the mobile path. Offline picks run once the edit syncs.
-
-## Logging a session
-- There is no separate "complete session" action. Enter reps in **Sessions** as you train; **Complete Week** logs every Sessions exercise that has reps (then rolls the week).
-- An exercise is logged once any of S1–S5 has reps. Untouched exercises are skipped; blank Actual Weight logs the Rec Weight.
-- One Log row per exercise, keyed by week + day + exercise. Already-logged exercises are skipped.
-- Clear Session and Build Session on the phone log any completed exercises first, so nothing is lost. Build Session still refuses if Sessions holds entries (Clear Session first); the menu versions ask first.
-- After pulling an older version: run **Set up workbook** once and rebuild Sessions if columns moved.
-
-## Complete Week (rollover)
-- Desktop: **Workout > Complete week (roll to next week)**. Phone: pick **Complete Week** in the Settings Action dropdown. Never runs on its own.
-- Logs any completed Session exercises first, then builds next week's Session and bumps Settings > Current week. Program is not modified.
-- Refuses when nothing is logged for the current week (blocks double-ticks) and when the current week is the last of the mesocycle (unless a deload week follows, see Deload).
-- Rules (numbers in `PROGRESSION`, Config.gs): reps = average over sets entered.
-  - Reps >= 15: weight +5% rounded to 2.5 lb, minimum +2.5 lb; reps = prev weight x prev reps / new weight, capped at 13.
-  - Otherwise: same weight, rep target = reps + 1 (at least Rep Min, at most 13 or Rep Max).
-  - Target RIR comes from the Settings ladder (3, 2, 1, 0).
-  - Exercise skipped this week: repeats its latest logged weight/reps. Never logged: Program start weight.
-- Editing **Rec Weight** on Session recalculates **Rep Target** so weight x reps matches last week's logged volume (uses the installable onEdit trigger from Set up workbook).
-- Existing Sheet: run **Set up workbook** once to add the Complete Week checkbox row.
-
-## Feedback rules (Pass 4; code in `Feedback.gs`, numbers and flag wording in `FEEDBACK`, Config.gs)
-Ratings are the Session dropdowns (Soreness, Pump, Tendon, Connection). A blank rating counts as neutral. Messages land in the script-managed **Flags** column (last column of Session and Log).
-- **Pump** (applies to the same-weight path): great/mid -> rep target = reps + 1; none -> reps + 2. Capped at the rep ceiling. The weight-increase path (15+ reps) keeps its volume-matched reps.
-- **Tendon**: bad -> maintenance next week: weight held, Program sets minus 1 (min 1), reps = last reps (no push), no weight increase. Flag "Maintenance". Maintenance is derived from the latest logged tendon rating, so one neutral/good (or blank) week ends it: the following week progresses normally from the same weight with the Program set count.
-- **Connection**: "not at all" -> "Technique check" flag; in 2 consecutive weeks -> "Swap suggested". A good/great week or a skipped week resets the count. Progression is not changed.
-- **Soreness** (per muscle group, per day; entered before training): "still sore" -> that session's Target RIR is one step easier (1 -> 2) and the rating spreads to the other rows with the same Day + Muscle Group. Sets are never changed. Still sore this week and last week -> "Under-recovered ... consider trimming a set" flag. Runs on the Session onEdit trigger (works from the phone once online); setting it back to none/mild restores the ladder RIR.
-- Existing Sheet: run **Set up workbook** once (Session and Log gain a **Flags** column) and rebuild Session.
-
-## Deload (Pass 5; code in `Deload.gs`, numbers in `DELOAD`, Config.gs)
-A deload week = half the Program sets (rounded up, min 1), weight held, reps = last performed (no push), Target RIR 4, flag "Deload week". State is derived from the Log (a week is a deload if its rows carry the flag); nothing is stored.
-- **Stall**: an exercise is stalled after 3 consecutive logged weeks with no weight or rep gain over the week before (flag "Stalled N weeks"). Maintenance (tendon) weeks are skipped, a skipped week ends the run, and counting restarts after a deload. Progression is not changed by the flag.
-- **Recommendation**: when at least half of the logged exercises (minimum 2) are stalled, the Complete Week status says "Deload recommended". It never converts anything on its own.
-- **Deload this week**: **Workout > Make this week a deload**, or pick **Deload this week** in the Settings Action dropdown. Rewrites the current, not-yet-started Session as a deload from Log history up to last week. Refuses if Session has entries or is already a deload.
-- **End of mesocycle**: with Settings > **Deload after last week** on (default), Complete Week on the last working week builds the next week as a deload (week N+1). Completing that deload week is refused (mesocycle complete: use Start New Mesocycle, see below). Off = the old refusal.
-- After a deload, progression resumes from the last working week (normal +1 rep at the same weight), not from the deload week's numbers. Soreness on a deload row eases from the deload RIR.
-- Existing Sheet: run **Set up workbook** once to add the Deload settings.
-
-## Archive and new mesocycle (Pass 6; code in `Archive.gs`, columns in `ARCHIVE_HEADERS`, Config.gs)
-The **Archive** tab is a chart-ready, long-term view across mesocycles: one row per exercise per day per week. Columns: Mesocycle, Meso Week, Overall Week, Date, Week Type, Day, Exercise, Primary Muscle, Secondary Muscles, Tertiary Muscles, Sets Done, Weight, Avg Reps, Volume, Target RIR, Actual RIR, Soreness, Pump, Tendon, Connection, Flags.
-- **Overall Week** keeps counting across mesocycles (meso week + the Archive's highest Overall Week), so it works as a time axis. **Date** is the week's earliest logged date. **Week Type** is Working or Deload.
-- **Volume** = weight x total reps entered; **Avg Reps** is to one decimal; **Sets Done** counts S1-S5 entries. Notes and the raw S1-S5 reps stay out of Archive. A re-logged exercise keeps its latest row.
-- **Start new mesocycle**: **Workout > Start new mesocycle (archive + reset)**, or pick **Start New Mesocycle** in the Settings Action dropdown. In order: log any completed Session exercises, append to Archive and verify the row count, set Program > Start Weight to each exercise's last working-week weight (deload weeks ignored; unlogged exercises keep theirs), clear Session and Log, advance **Mesocycle name** ("Meso 1" -> "Meso 2"), set Current week to 1 and build the week-1 Session. Log is only cleared after the Archive copy checks out.
-- **Mesocycle name** (Settings > Program setup) is the Archive label. Archive refuses a label it already holds, so a double pick cannot duplicate rows.
-- The phone checkbox only runs when the mesocycle is finished (the deload week is the current week, or the last week with the deload toggle off, or past the end). The menu item can end an unfinished mesocycle early after a confirmation.
-- A pending progression bump is not applied to the start weight: it is the weight actually used in the last working week.
-- Existing Sheet: run **Set up workbook** once (adds the Archive tab and the Mesocycle name and Start New Mesocycle settings; the name starts at "Meso 1").
-
-## Muscle Summary and Trends (Pass 7; code in `MuscleSummary.gs` and `Trends.gs`, constants in `SUMMARY` / `TRENDS_LAYOUT`, Config.gs)
-- **Muscle Summary** tab (script-written, warning-protected): rows = muscle groups, columns = Overall Week, cells = sets done. Row 2 names the mesocycle ("Meso 1 · Deload" on deload weeks), last row is Total, darker green = more sets. Skipped weeks show as zero columns.
-- **Data**: Archive (past mesocycles) + the current Log, so the weeks keep counting after Start New Mesocycle. Sets = sets actually done (S1-S5 entries), same as Archive "Sets Done".
-- **Exercise Map** has three muscle columns: **Muscle Group** (primary), **Secondary Muscles**, **Tertiary Muscles** (comma lists, optional). The muscle-group rows are every name in those columns, in map order; a new group such as Adductors appears as soon as it is typed into the map (zeros until logged). Nothing is named in code.
-- The muscle of a logged exercise is looked up in the map when the summary refreshes, so adding an exercise to the map also fixes earlier `?? not in Exercise Map` rows. An exercise missing from the map keeps the muscle stored on its Log row; anything still unknown gets its own last row, so totals always add up.
-- **Secondary / tertiary counting** (Settings > Preferences): tick *count secondary / tertiary muscles* and set the credit per set (defaults 0.5 and 0.25). Primary always counts 1. A muscle named in several roles of one exercise counts once, at the highest role that is switched on. Both boxes off = a plain primary-only hand count. A caption under the pivot says what is being counted. Total = sum of the rows, so it includes the fractional credit.
-- **Trends** tab: pick an item in B1 (*Muscle: x* or *Exercise: x*) and a metric in B2 (Sets, Volume, Top weight, Avg reps). Chart below, data block in J:K, item list in M (script-managed). Muscles only have Sets and Volume (other metrics fall back to Sets, with a note); muscle Volume follows the same secondary/tertiary options.
-- **Refresh** is automatic after Complete Week and Start New Mesocycle, and when you edit the Exercise Map, the Settings > Preferences options or the Trends dropdowns (same installable onEdit trigger, no new authorization). Manual: **Workout > Refresh muscle summary + trends**, or pick **Refresh Muscle Summary** in the Settings Action dropdown. A summary error is logged and never blocks logging.
-- Existing Sheet: run **Set up workbook** once (adds the Trends tab, Exercise Map columns C-D and the new Settings options), then **Run sheet tests**.
-
-## Primary / Secondary / Tertiary columns in Log and Archive (Pass 10A; code in `LogLayout.gs`, headers in `Config.gs`)
-- **Log** columns are now Date, Week, Day, Exercise, **Primary Muscle, Secondary Muscles, Tertiary Muscles**, Sets, ... Flags. **Archive** has the same three columns after Exercise. **Sessions** keeps its single *Muscle Group* (primary) column so the phone view stays narrow.
-- Secondary / tertiary are copied from the Exercise Map when an exercise is logged, so each Log row shows which muscles it can credit. A later map edit does not rewrite old Log rows, but the Muscle Summary still reads the map first (so editing the map fixes old rows) and falls back to the three columns on the row when the exercise is no longer in the map.
-- Counting is unchanged and lives in Settings > Preferences: both credits 1 = every listed muscle gets a full set (bench = 1 chest + 1 triceps + ...); 0.5 / 0.25 = partial credit; both boxes off = primary only.
-- In code a Log row is still `[Date, ...Session columns, Secondary, Tertiary]` (`LOG_ROW`), so `r[SESSION_COLS.X]` works on Log rows. `readLogRows` / `completeSession` convert to and from the sheet layout (`logRowFromSheet` / `logRowToSheet`). Anything that reads the Log sheet directly must use those.
-- **Existing Sheet:** push, then run **Set up workbook** once. It inserts the two columns after the old *Muscle Group* column in Log and Archive and fills them from the Exercise Map by exercise name (blank when the exercise is not in the map). Until that run, logging and Complete Week read the old layout wrongly, so do it before the next session. Idempotent.
+- Pure logic goes above a "Sheet side" marker so Node covers it. When the real Sheet and the mock disagree, fix the mock first.
+- A Log row in code is `[Date, ...Session columns, Secondary, Tertiary]`; anything reading the Log sheet directly must go
+  through `logRowFromSheet` / `logRowToSheet`.
+- No top-level code in one `.gs` file may read another file's globals (load order is not guaranteed): derived constants go in `Config.gs`.
+- Rep Range and the hidden Sessions columns are hidden, not deleted, because the gray compare, progression and override
+  recalculation use them.
+- Phone checklist and results: `docs/iphone-test-checklist.md`. Ideas not scheduled: `docs/aspirations.md`.
