@@ -134,9 +134,11 @@ function planSorenessUpdate(sessionRows, editedIdx, ladder, logRows) {
     var j = Number(key), r = rows[j];
     var week = parseNumber(r[SESSION_COLS.WEEK - 1]);
     if (week === null) return;
+    var oldRir = parseNumber(sessionRows[j][SESSION_COLS.RIR - 1]);
     var soreness = r[SESSION_COLS.SORENESS - 1];
     var baseRir = isDeloadFlags(r[SESSION_COLS.FLAGS - 1]) ? DELOAD.rir : rirForWeek(ladder, week);
     r[SESSION_COLS.RIR - 1] = sorenessRir(baseRir, soreness);
+    if (oldRir !== null && parseNumber(r[SESSION_COLS.ACTUAL_RIR - 1]) === oldRir) r[SESSION_COLS.ACTUAL_RIR - 1] = r[SESSION_COLS.RIR - 1];   // a default Actual RIR follows the target
     var flag = isUnderRecovered(logRows, r[SESSION_COLS.MUSCLE - 1], week, soreness) ? FEEDBACK.flags.recovery : '';
     r[SESSION_COLS.FLAGS - 1] = setFlagSegment(r[SESSION_COLS.FLAGS - 1], 'Under-recovered', flag);
     out.push(j);
@@ -163,6 +165,9 @@ function applySorenessEdit(range) {
   plan.changed.forEach(function (j) {
     sh.getRange(j + 2, SESSION_COLS.SORENESS).setValue(plan.rows[j][SESSION_COLS.SORENESS - 1]);
     sh.getRange(j + 2, SESSION_COLS.RIR).setValue(plan.rows[j][SESSION_COLS.RIR - 1]);
+    if (plan.rows[j][SESSION_COLS.ACTUAL_RIR - 1] !== rows[j][SESSION_COLS.ACTUAL_RIR - 1]) {
+      sh.getRange(j + 2, SESSION_COLS.ACTUAL_RIR).setValue(plan.rows[j][SESSION_COLS.ACTUAL_RIR - 1]);
+    }
     sh.getRange(j + 2, SESSION_COLS.FLAGS).setValue(plan.rows[j][SESSION_COLS.FLAGS - 1]);
   });
 }

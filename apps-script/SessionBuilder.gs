@@ -136,9 +136,7 @@ function sessionHasUserInput(sessionSheet) {
   var last = sessionSheet.getLastRow();
   if (last < 2) return false;
   var data = sessionSheet.getRange(2, 1, last - 1, SESSION_HEADERS.length).getValues();
-  return data.some(function (row) {
-    return SESSION_ENTRY_COLS.some(function (c) { return row[c - 1] !== ''; });
-  });
+  return data.some(rowHasUserInput);   // Actual RIR / Weight still equal to their defaults do not count
 }
 
 /**
@@ -197,7 +195,7 @@ function writeSession(session, rows) {
   if (session.getLastRow() > 1) {
     session.getRange(2, 1, session.getLastRow() - 1, SESSION_HEADERS.length).clearContent();
   }
-  session.getRange(2, 1, rows.length, SESSION_HEADERS.length).setValues(rows);
+  session.getRange(2, 1, rows.length, SESSION_HEADERS.length).setValues(fillActualDefaults(rows));
   paintSessionDays(session, rows);
 }
 

@@ -5,7 +5,7 @@ const path = require('path');
 const vm = require('vm');
 
 const dir = path.join(__dirname, '..', 'apps-script');
-const GS_FILES = ['Config.gs', 'Utils.gs', 'SessionBuilder.gs', 'Logger.gs', 'Rollover.gs', 'Feedback.gs', 'Deload.gs', 'Archive.gs', 'MuscleSummary.gs', 'LogLayout.gs', 'Trends.gs', 'SettingsLayout.gs', 'Setup.gs', 'SheetTests.gs', 'FeedbackTests.gs', 'DeloadTests.gs', 'ArchiveTests.gs', 'MuscleSummaryTests.gs', 'LogLayoutTests.gs', 'SampleWeek.gs', 'WeekFlowTests.gs', 'Tests.gs'];
+const GS_FILES = ['Config.gs', 'Utils.gs', 'SessionBuilder.gs', 'Logger.gs', 'Rollover.gs', 'Feedback.gs', 'Deload.gs', 'Archive.gs', 'MuscleSummary.gs', 'LogLayout.gs', 'SessionLayout.gs', 'Trends.gs', 'SettingsLayout.gs', 'Setup.gs', 'SheetTests.gs', 'FeedbackTests.gs', 'DeloadTests.gs', 'ArchiveTests.gs', 'MuscleSummaryTests.gs', 'LogLayoutTests.gs', 'SampleWeek.gs', 'WeekFlowTests.gs', 'SessionLayoutTests.gs', 'Tests.gs'];
 
 function loadGs(globals) {
   const ctx = vm.createContext(Object.assign({ console }, globals));

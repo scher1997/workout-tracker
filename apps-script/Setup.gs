@@ -41,6 +41,7 @@ function setupWorkbook() {
   setupHeaderTab(ss, TABS.MAP, MAP_HEADERS);
   setupHeaderTab(ss, TABS.SESSION, SESSION_HEADERS);
   ss.getSheetByName(TABS.SESSION).setColumnWidth(SESSION_COLS.FLAGS, 320);
+  setupSessionLayout(ss);   // frozen Week / Day / Exercise, gray default look for Actual RIR / Weight
   migrateMuscleColumns(ss);   // old Log / Archive (one Muscle Group column) gain Secondary + Tertiary before headers are rewritten
   setupHeaderTab(ss, TABS.LOG, LOG_HEADERS);
   ss.getSheetByName(TABS.LOG).getRange('A2:A').setNumberFormat('yyyy-mm-dd');
@@ -199,6 +200,7 @@ function onSettingsEdit(e) {
   var r = e.range;
   var sheetName = r.getSheet().getName();
   if (sheetName === TABS.SESSION) {
+    followRecWeightEdit(r, e.oldValue);   // before the reps are recalculated: the old default is still readable
     recalcRepsForWeightEdit(r, e.oldValue);
     applySorenessEdit(r);
     return;

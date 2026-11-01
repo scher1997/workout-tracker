@@ -183,6 +183,8 @@ function runSheetTests() {
     logLayoutSheetTests(ss, check, helpers);
     // 13. Pass 10B: day-by-day Sessions tab and whole-week logging, complete and incomplete (WeekFlowTests.gs)
     weekFlowSheetTests(ss, check, helpers);
+    // 14. Pass 10C: Actual RIR / Weight defaults, number pad cells, frozen columns (SessionLayoutTests.gs)
+    sessionLayoutSheetTests(ss, check, helpers);
   } catch (e) {
     check('sheet tests ran without error', String(e), '');
   } finally {

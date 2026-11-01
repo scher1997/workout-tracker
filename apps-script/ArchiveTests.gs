@@ -173,8 +173,10 @@ function archiveSheetTests(ss, check, h) {
     [acol('WEIGHT'), acol('AVG_REPS'), acol('VOLUME')],
     [[22.5, 50, 22.5, 50, 10, 50], [10, 9, 10, 10, 8, 8], [675, 1350, 675, 1500, 160, 800]]);
   var ladder = readSettings(ss).rirLadder;
-  check('archive: target and actual RIR', [acol('TARGET_RIR'), acol('ACTUAL_RIR')],
-    [[rirForWeek(ladder, 1), rirForWeek(ladder, 1), rirForWeek(ladder, 2), rirForWeek(ladder, 2), DELOAD.rir, DELOAD.rir], [2, '', '', '', '', '']]);
+  // Only the first exercise had an Actual RIR typed; the rest log the Target RIR that Sessions showed as their default.
+  check('archive: target RIR, and actual RIR (typed 2, otherwise the default = target)', [acol('TARGET_RIR'), acol('ACTUAL_RIR')],
+    [[rirForWeek(ladder, 1), rirForWeek(ladder, 1), rirForWeek(ladder, 2), rirForWeek(ladder, 2), DELOAD.rir, DELOAD.rir],
+     [2, rirForWeek(ladder, 1), rirForWeek(ladder, 2), rirForWeek(ladder, 2), DELOAD.rir, DELOAD.rir]]);
   check('archive: deload flag carried, date is a real date', [acol('FLAGS')[4], archRows()[0][ARCHIVE_COLS.DATE - 1] instanceof Date], [DELOAD.flags.deload, true]);
   check('new meso: Log cleared', h.rowsOf(logSheet, LOG_HEADERS.length).length, 0);
   check('new meso: Program Start Weight = last working weight (deload ignored)',

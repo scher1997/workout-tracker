@@ -38,6 +38,11 @@ var SESSION_PROTECTED_COLS = [1, 2, 3, 4, 5, 7, 9, 22];
 // Row tints on Sessions: each day (in order of first appearance) gets the next colour, so a day reads as one table.
 var SESSION_DAY_COLORS = ['#e8f0fe', '#fef7e0'];
 var SESSION_BLANK_COLOR = '#ffffff';
+// Sessions layout (SessionLayout.gs): columns frozen on the left (through Exercise), their widths (narrow, so the entry
+// cells keep room on a phone), and the gray of an Actual RIR / Actual Weight that still equals its recommendation.
+var SESSION_FROZEN_COLS = SESSION_COLS.EXERCISE;
+var SESSION_FROZEN_WIDTHS = [[SESSION_COLS.WEEK, 44], [SESSION_COLS.DAY, 52], [SESSION_COLS.EXERCISE, 150]];
+var ACTUAL_DEFAULT_COLOR = '#9aa0a6';
 
 // Log and Archive split the muscle into three columns; Sessions keeps the single primary "Muscle Group" column.
 var MUSCLE_HEADERS = ['Primary Muscle', 'Secondary Muscles', 'Tertiary Muscles'];

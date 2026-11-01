@@ -195,6 +195,12 @@ class Sheet {
     return this;
   }
   setFrozenRows(n) { this.frozenRows = n; return this; }
+  setFrozenColumns(n) { this.frozenCols = n; return this; }
+  getFrozenColumns() { return this.frozenCols || 0; }
+  setColumnWidth(col, w) { (this.widths = this.widths || {})[col] = w; return this; }
+  getColumnWidth(col) { return (this.widths || {})[col] || 100; }
+  setConditionalFormatRules(rules) { this.cfRules = rules; return this; }
+  getConditionalFormatRules() { return (this.cfRules || []).slice(); }
   addProtection(type) {
     const p = new Protection(type, self => { this.protections = this.protections.filter(x => x !== self); });
     this.protections.push(p);
@@ -218,8 +224,7 @@ class Sheet {
   removeChart(chart) { this.charts = this.charts.filter(c => c !== chart); }
   getCharts() { return this.charts.slice(); }
 }
-chainable(Sheet.prototype, ['setFrozenColumns', 'setColumnWidth', 'setColumnWidths', 'setRowHeight', 'setHiddenGridlines',
-  'setConditionalFormatRules']);
+chainable(Sheet.prototype, ['setColumnWidths', 'setRowHeight', 'setHiddenGridlines']);
 
 class Spreadsheet {
   constructor() { this.sheets = [new Sheet(this, 'Sheet1')]; this.active = this.sheets[0]; this.toasts = []; }
@@ -269,7 +274,17 @@ function createMockEnv() {
     flush() {},
     newDataValidation: () => new ValidationBuilder(),
     newConditionalFormatRule: () => {
-      const b = { setGradientMinpoint: () => b, setGradientMaxpoint: () => b, setRanges: () => b, build: () => ({}) };
+      const rule = { ranges: [], formula: null, fontColor: null };
+      const b = {
+        whenFormulaSatisfied: f => { rule.formula = f; return b; },
+        setFontColor: c => { rule.fontColor = c; return b; },
+        setGradientMinpoint: () => b, setGradientMaxpoint: () => b,
+        setRanges: r => { rule.ranges = r; return b; },
+        build: () => ({
+          getRanges: () => rule.ranges,
+          getBooleanCondition: () => rule.formula && { getCriteriaType: () => 'CUSTOM_FORMULA', getCriteriaValues: () => [rule.formula], getFontColor: () => rule.fontColor }
+        })
+      };
       return b;
     },
     ProtectionType: { RANGE: 'RANGE', SHEET: 'SHEET' },
