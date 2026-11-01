@@ -1,7 +1,7 @@
 # Workout Tracker
 
 Google Sheets workout logger written in Apps Script (`apps-script/`), bound to a Sheet with clasp.
-The old Python tracker (`src/`, `config/`) is unused.
+The old Python tracker was removed in Pass 11 (it is in git history before that commit); there is no Python here.
 
 ## How to run
 - Pure tests: `node gs-tests/run-node.js`
