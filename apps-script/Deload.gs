@@ -44,6 +44,24 @@ function lastDeloadWeek(logRows, week) {
   return last;
 }
 
+/**
+ * Number of this week among the working weeks: deload weeks before it are not counted.
+ * A deload week uses neither a step of the RIR ladder nor a week of the mesocycle length.
+ */
+function workingWeekNumber(logRows, week) {
+  var deloadWeeks = {};
+  logRows.forEach(function (r) {
+    var w = parseNumber(r[SESSION_COLS.WEEK]);
+    if (isDeloadEntry(r) && w !== null && w < week) deloadWeeks[w] = true;
+  });
+  return week - Object.keys(deloadWeeks).length;
+}
+
+/** Working weeks finished once the current week is completed (the current week counts unless it is a deload). */
+function workingWeeksDone(logRows, week, onDeload) {
+  return workingWeekNumber(logRows, week) - (onDeload ? 1 : 0);
+}
+
 // ---- Stall detection ----
 
 /**

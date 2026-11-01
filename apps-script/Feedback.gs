@@ -136,7 +136,7 @@ function planSorenessUpdate(sessionRows, editedIdx, ladder, logRows) {
     if (week === null) return;
     var oldRir = parseNumber(sessionRows[j][SESSION_COLS.RIR - 1]);
     var soreness = r[SESSION_COLS.SORENESS - 1];
-    var baseRir = isDeloadFlags(r[SESSION_COLS.FLAGS - 1]) ? DELOAD.rir : rirForWeek(ladder, week);
+    var baseRir = isDeloadFlags(r[SESSION_COLS.FLAGS - 1]) ? DELOAD.rir : rirForWeek(ladder, workingWeekNumber(logRows, week));
     r[SESSION_COLS.RIR - 1] = sorenessRir(baseRir, soreness);
     if (oldRir !== null && parseNumber(r[SESSION_COLS.ACTUAL_RIR - 1]) === oldRir) r[SESSION_COLS.ACTUAL_RIR - 1] = r[SESSION_COLS.RIR - 1];   // a default Actual RIR follows the target
     var flag = isUnderRecovered(logRows, r[SESSION_COLS.MUSCLE - 1], week, soreness) ? FEEDBACK.flags.recovery : '';

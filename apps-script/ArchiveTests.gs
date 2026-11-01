@@ -69,13 +69,18 @@ function runArchiveTests() {
   check('archiveHasLabel: case/space-insensitive', [archiveHasLabel(sorted, ' m '), archiveHasLabel(sorted, 'Meso 2')], [true, false]);
 
   // Is the mesocycle finished?
-  var done = function (week, meso, atEnd, onDeload) { return mesoComplete({ week: week, mesoWeeks: meso, deloadAtEnd: atEnd }, onDeload); };
+  // First argument = working weeks finished once the current week is completed (workingWeeksDone).
+  var done = function (n, meso, atEnd, onDeload) { return mesoComplete(n, { mesoWeeks: meso, deloadAtEnd: atEnd }, onDeload); };
   check('mesoComplete: before the last week -> no', [done(5, 6, true, false), done(5, 6, false, false)], [false, false]);
   check('mesoComplete: last week with a deload still to come -> no', done(6, 6, true, false), false);
   check('mesoComplete: last week with deload toggle off -> yes', done(6, 6, false, false), true);
-  check('mesoComplete: on the deload week (end or mid-meso at the last week) -> yes', [done(7, 6, true, true), done(6, 6, true, true)], [true, true]);
-  check('mesoComplete: mid-meso deload week is not the end', done(3, 6, true, true), false);
+  check('mesoComplete: on the end deload week (all working weeks done) -> yes', [done(6, 6, true, true), done(6, 6, false, true)], [true, true]);
+  check('mesoComplete: mid-meso deload week is not the end, even in the last slot', [done(2, 6, true, true), done(5, 6, true, true)], [false, false]);
   check('mesoComplete: past the end -> yes', done(7, 6, true, false), true);
+  var deloadLogRow = function (w) { var r = []; for (var i = 0; i < LOG_HEADERS.length; i++) r.push(''); r[SESSION_COLS.WEEK] = w; r[SESSION_COLS.FLAGS] = DELOAD.flags.deload; return r; };
+  check('workingWeeksDone: mid-meso deload is not counted (it ends neither the ladder nor the meso)',
+    [workingWeeksDone([], 3, false), workingWeeksDone([deloadLogRow(3)], 4, false), workingWeeksDone([deloadLogRow(3)], 7, false), workingWeeksDone([deloadLogRow(3)], 3, true), workingWeeksDone([deloadLogRow(3)], 8, true)],
+    [3, 3, 6, 2, 6]);
 
   // Program start weights
   var rr = { repMin: 8, repMax: 12 };   // Settings defaults

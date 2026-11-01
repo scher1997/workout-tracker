@@ -15,4 +15,5 @@ Running list of what `apps-script/README.md` still gets wrong or lacks. The READ
 - Menu: Load sample week (full / incomplete), for use on a copy of the workbook only.
 - Test tooling: `gs-tests/run-sheet-tests.js` and the mock SpreadsheetApp, `gs-files.js` as the shared file list, `MOCK_TRACE=1`.
 - New files: LogLayout, SampleWeek, SessionLayout, WeekFlowTests, SessionLayoutTests (and their roles).
+- Mid-meso deload (Pass 11): a deload week uses no step of the RIR ladder and no week of "Mesocycle length", which now counts working weeks (default 7, so the end deload is week 8; label "Mesocycle length (working weeks)"). The week after a deload takes the ladder step the deload replaced; the meso ends after the Nth working week plus the end deload. Messages say "working week x of N". Helpers `workingWeekNumber` / `workingWeeksDone` in Deload.gs. Existing workbooks keep their stored length (6 stays 6 until edited); the label updates on Set up workbook.
 - Archive's Actual RIR column now holds the Target RIR for exercises logged without an explicit Actual RIR.

@@ -39,11 +39,12 @@ function archiveHasLabel(archiveRows, label) {
 
 /**
  * The mesocycle is finished once the last working week is behind us: the deload week is the current week,
- * or no deload follows the last week (toggle off), or the week count is already past the length.
+ * or no deload follows the last week (toggle off), or the working-week count is already past the length.
+ * done: working weeks finished once the current week is completed (workingWeeksDone in Deload.gs).
  */
-function mesoComplete(settings, onDeload) {
-  if (settings.week < settings.mesoWeeks) return false;
-  return onDeload || settings.week > settings.mesoWeeks || !settings.deloadAtEnd;
+function mesoComplete(done, settings, onDeload) {
+  if (done < settings.mesoWeeks) return false;
+  return onDeload || done > settings.mesoWeeks || !settings.deloadAtEnd;
 }
 
 function round1(x) { return Math.round(x * 10) / 10; }
@@ -150,9 +151,11 @@ function startNewMesocycle(opts) {
 
   var settings = readSettings(ss);
   var label = settings.mesoName || 'Meso 1';
-  var early = !mesoComplete(settings, sessionIsDeload(session));
+  var onDeload = sessionIsDeload(session);
+  var done = workingWeeksDone(readLogRows(log), settings.week, onDeload);
+  var early = !mesoComplete(done, settings, onDeload);
   if (early && !interactive) {
-    return refuse('Mesocycle not finished (week ' + settings.week + ' of ' + settings.mesoWeeks
+    return refuse('Mesocycle not finished (working week ' + done + ' of ' + settings.mesoWeeks
       + (settings.deloadAtEnd ? ', then a deload week' : '') + '). Finish it, or use Workout > Start new mesocycle to end early.');
   }
   var archLast = lastDataRow(archive, ARCHIVE_HEADERS.length);
@@ -167,7 +170,7 @@ function startNewMesocycle(opts) {
 
   if (interactive) {
     var ui = SpreadsheetApp.getUi();
-    var msg = (early ? 'This mesocycle is not finished (week ' + settings.week + ' of ' + settings.mesoWeeks + ').\n\n' : '')
+    var msg = (early ? 'This mesocycle is not finished (working week ' + done + ' of ' + settings.mesoWeeks + ').\n\n' : '')
       + (pending ? pending + ' completed exercise(s) will be logged first.\n\n' : '')
       + 'Archive Log as "' + label + '", set Program start weights to where the last working week was heading, '
       + 'clear Log, reset to week 1 as "' + nextMesoName(label) + '" and rebuild Session?';

@@ -131,7 +131,8 @@ function planNextWeek(programRows, logRows, lookup, settings) {
   });
   summary.deloadAdvice = { stalled: summary.stalled.length, logged: logged,
     recommended: deloadRecommendation(summary.stalled.length, logged) };
-  var next = { week: settings.week + 1, rirLadder: settings.rirLadder, repMin: settings.repMin, repMax: settings.repMax };
+  var next = { week: settings.week + 1, rirLadder: settings.rirLadder, repMin: settings.repMin, repMax: settings.repMax,
+    rirWeek: workingWeekNumber(logRows, settings.week + 1) };   // a mid-meso deload week uses no ladder step
   var plan = planSessionRows(programRows, lookup, next, overrides);
   plan.week = next.week;
   plan.summary = summary;
@@ -218,13 +219,15 @@ function completeWeek(opts) {
   var timer = stageTimer('completeWeek');
   var settings = readSettings(ss);
   var onDeload = sessionIsDeload(session);
-  // Completing the last working week appends a deload week (Settings toggle); the deload week itself ends the meso.
-  var deloadNext = settings.week === settings.mesoWeeks && settings.deloadAtEnd && !onDeload;
-  if (settings.week >= settings.mesoWeeks && !deloadNext) {
+  // Mesocycle length counts working weeks: a mid-meso deload week does not use one.
+  // Completing the last working week appends a deload week (Settings toggle); that deload week ends the meso.
+  var done = workingWeeksDone(readLogRows(log), settings.week, onDeload);
+  var deloadNext = done === settings.mesoWeeks && settings.deloadAtEnd && !onDeload;
+  if (done >= settings.mesoWeeks && !deloadNext) {
     return refuse(onDeload
       ? 'Week ' + settings.week + ' was the deload week, so the mesocycle is complete.'
         + ' Pick "Start New Mesocycle" in the Settings Action list (archives the Log), or raise "Mesocycle length" to keep going.'
-      : 'Week ' + settings.week + ' is the last of ' + settings.mesoWeeks
+      : 'Week ' + settings.week + ' was working week ' + done + ', the last of ' + settings.mesoWeeks
         + '. Raise "Mesocycle length" in Settings to keep going, or turn on "Deload after last week".');
   }
   var progRows = program.getLastRow() > 1
@@ -264,7 +267,7 @@ function completeWeek(opts) {
   var s = plan.summary;
   var notes = [deloadNext
     ? 'Week ' + plan.week + ' is a deload week: half sets, weight held, target RIR ' + DELOAD.rir + '.'
-    : 'Week ' + plan.week + ' ready (target RIR ' + rirForWeek(settings.rirLadder, plan.week) + ').'];
+    : 'Week ' + plan.week + ' ready (target RIR ' + plan.rir + ').'];
   if (warning) notes.push(warning);
   if (s.increase.length) notes.push('Weight up: ' + s.increase.join(', ') + '.');
   if (s.hold.length) notes.push(s.hold.length + ' same weight, more reps.');

@@ -47,15 +47,16 @@ function rowRepRange(r, settings, ov) {
 
 /**
  * programRows: [[day, exercise, sets, startWeight, repMin, repMax], ...]
- * settings:    {week, rirLadder, repMin, repMax}
+ * settings:    {week, rirLadder, repMin, repMax, rirWeek?}  (rirWeek: the ladder position, default week; see workingWeekNumber)
  * overrides:   optional {overrideKey: {weight, sets, repMin, repMax, repTarget, rir, flags}}
- * Returns {rows, unknown, duplicates, warnings}.
+ * Returns {rows, unknown, duplicates, warnings, rir (the ladder Target RIR used)}.
  */
 function planSessionRows(programRows, lookup, settings, overrides) {
   overrides = overrides || {};
   var out = { rows: [], unknown: [], duplicates: [], warnings: [] };
   var seen = {};
-  var rir = rirForWeek(settings.rirLadder, settings.week);
+  var rir = rirForWeek(settings.rirLadder, settings.rirWeek != null ? settings.rirWeek : settings.week);   // rirWeek: working-week number
+  out.rir = rir;
 
   programRows.forEach(function (r, i) {
     var exercise = cleanName(r[1]);
@@ -225,6 +226,8 @@ function buildSession(opts) {
   var mapRows = map.getLastRow() > 1
     ? map.getRange(2, 1, map.getLastRow() - 1, 2).getValues() : [];
 
+  var log = ss.getSheetByName(TABS.LOG);
+  settings.rirWeek = workingWeekNumber(log ? readLogRows(log) : [], settings.week);   // earlier deload weeks use no ladder step
   var plan = planSessionRows(progRows, buildMuscleLookup(mapRows), settings);
   if (!plan.rows.length) {
     setStatus(ss, 'Program has no exercises. Add rows to Program, then build again.');
@@ -248,7 +251,7 @@ function buildSession(opts) {
   writeSession(session, plan.rows);
 
   var notes = ['Built week ' + settings.week + ': ' + plan.rows.length + ' exercises, target RIR '
-    + rirForWeek(settings.rirLadder, settings.week) + '.'];
+    + plan.rir + '.'];
   if (plan.unknown.length) notes.push('Not in Exercise Map: ' + plan.unknown.join(', ') + '.');
   if (plan.duplicates.length) notes.push('Duplicates: ' + plan.duplicates.join(', ') + '.');
   notes = notes.concat(plan.warnings);

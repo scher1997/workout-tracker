@@ -92,7 +92,7 @@ var SETTINGS_SECTIONS = [
 ];
 var SETTINGS_LABELS = {
   WEEK: 'Current week', STATUS: 'Status', ACTION: 'Action',
-  MESO_NAME: 'Mesocycle name', MESO_WEEKS: 'Mesocycle length (weeks)', RIR_LADDER: 'Target RIR by week',
+  MESO_NAME: 'Mesocycle name', MESO_WEEKS: 'Mesocycle length (working weeks)', RIR_LADDER: 'Target RIR by week',
   REP_MIN: 'Default rep min', REP_MAX: 'Default rep max',
   DELOAD_AT_END: 'Deload after last week', INCL_SECONDARY: 'Count secondary muscles',
   INCL_TERTIARY: 'Count tertiary muscles', SECONDARY_WEIGHT: 'Secondary credit per set', TERTIARY_WEIGHT: 'Tertiary credit per set'
@@ -156,7 +156,7 @@ var DELOAD = {
 
 var DEFAULTS = {
   week: 1,
-  mesoWeeks: 6,
+  mesoWeeks: 7,   // working weeks; the deload week comes after (week 8)
   rirLadder: [3, 2, 1, 0],
   repMin: 8,
   repMax: 12,

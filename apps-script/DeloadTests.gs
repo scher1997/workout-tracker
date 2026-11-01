@@ -103,6 +103,17 @@ function runDeloadTests() {
   check('deload planned after a deload still uses the working weight',
     [cell(plan([curl(1, 20, 10), curl(2, 25, 12, { FLAGS: DL })], 2, prog, true), 'REC_WEIGHT')], [20]);
 
+  // Mid-meso deload: a deload week uses no step of the RIR ladder, so the next working week resumes it
+  var withDeload3 = [curl(1, 20, 10), curl(2, 20, 10), curl(3, 20, 10, { FLAGS: DL })];
+  var noDeload3 = [curl(1, 20, 10), curl(2, 20, 10), curl(3, 20, 10)];
+  check('ladder: week after a mid-meso deload takes the step the deload skipped (ladder 3,2,1,0)',
+    [cell(plan(withDeload3, 3), 'RIR'), cell(plan(noDeload3, 3), 'RIR')], [rirForWeek(ladder, 3), rirForWeek(ladder, 4)]);
+  check('ladder: the step after that follows on', cell(plan(withDeload3.concat([curl(4, 20, 10)]), 4), 'RIR'), rirForWeek(ladder, 4));
+  var week4 = planSessionRows(prog, lookup, settingsFor(4), undefined).rows;
+  week4[0][SESSION_COLS.SORENESS - 1] = 'still sore';
+  check('ladder: soreness on the week after a deload keeps the resumed step',
+    planSorenessUpdate(week4, [0], ladder, withDeload3).rows[0][SESSION_COLS.RIR - 1], rirForWeek(ladder, 3) + FEEDBACK.sorenessRirStep);
+
   // Soreness on a deload row keeps the deload RIR base
   var row = planSessionRows(prog, lookup, settingsFor(1), (function () { var o = {}; o[key] = { rir: DELOAD.rir, flags: DL }; return o; })()).rows;
   row[0][SESSION_COLS.SORENESS - 1] = 'still sore';
@@ -184,4 +195,23 @@ function deloadSheetTests(ss, check, h) {
   start(1, 6);
   h.enter(2, { S1: 10 });
   check('convert: refused when Session has entries', [makeDeloadWeek().ok, col('SETS')], [false, [3, 3]]);
+
+  // Mid-meso deload uses no ladder step and no mesocycle week: 3 working weeks = weeks 1, 3, 4, then the end deload (week 5)
+  var ladder = readSettings(ss).rirLadder;
+  start(1, 3);
+  flat();
+  h.completeWeek({ interactive: false });
+  check('mid-meso deload: week 2 is working week 2 of the ladder', [weekCell.getValue(), col('RIR')], [2, [rirForWeek(ladder, 2), rirForWeek(ladder, 2)]]);
+  check('mid-meso deload: converted', [makeDeloadWeek().ok, col('RIR')], [true, [DELOAD.rir, DELOAD.rir]]);
+  flat();
+  check('mid-meso deload: deload week completes', [h.completeWeek({ interactive: false }).ok, weekCell.getValue()], [true, 3]);
+  check('mid-meso deload: week after takes the ladder step the deload skipped', col('RIR'), [rirForWeek(ladder, 2), rirForWeek(ladder, 2)]);
+  flat();
+  check('mid-meso deload: working week 2 rolls', [h.completeWeek({ interactive: false }).ok, weekCell.getValue(), col('RIR')], [true, 4, [rirForWeek(ladder, 3), rirForWeek(ladder, 3)]]);
+  flat();
+  h.completeWeek({ interactive: false });
+  check('mid-meso deload: meso still gets 3 working weeks, then the end deload',
+    [weekCell.getValue(), col('FLAGS'), col('RIR')], [5, [DELOAD.flags.deload, DELOAD.flags.deload], [DELOAD.rir, DELOAD.rir]]);
+  flat();
+  check('mid-meso deload: end deload closes the meso', [h.completeWeek({ interactive: false }).ok, weekCell.getValue()], [false, 5]);
 }
