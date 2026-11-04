@@ -1,20 +1,41 @@
 agent = 'claude-code'
 
 review_guidelines = """
-Goal: flag issues that make bugs hard to trace.
+Project: Google Sheets workout tracker written in Apps Script (apps-script/*.gs, ES5 style), tested in Node
+(gs-tests/) against an in-memory SpreadsheetApp mock and in the real Sheet. The user's training log lives in
+the Sheet, so a bug that silently drops, duplicates or misreads rows costs real data.
+Goal: flag issues that make bugs hard to trace or that can lose or corrupt the user's data.
 
 Flag:
-- Silent failures (misaligned indices, silent NaN propagation, wrong merge keys)
-- Mutable defaults or shared state that could corrupt results across calls
-- Variable shadowing or reuse that obscures what value is in scope
-- Swallowed exceptions without logging or re-raise
-- Non-determinism without a fixed random seed where reproducibility matters
+- Index and offset mistakes between Sheet coordinates and arrays: 1-based columns and rows vs 0-based arrays
+  (SESSION_COLS[x] vs row[x - 1]), the Log row convention [Date, ...Session columns, Secondary, Tertiary]
+  vs the sheet layout, sheet row = array index + 2, ranges sized with a literal width instead of the
+  matching *_HEADERS.length, getLastRow() counting rows that only carry formatting or validation
+- Names compared without normalizeName() / cleanName() (case and spacing), or lookup keys built two
+  different ways (week + day + exercise, overrideKey), so two spellings quietly become two records
+- Silent failures: a refusal or early return that never calls setStatus, a try/catch that swallows an error
+  without logging it, a fallback that hides a real problem (unknown muscle, missing tab, empty Program)
+- Destructive writes (clearContent, deleteSheet, replacing a tab body) with no confirmation, no backup,
+  or on a path that can run twice at once (the phone Action dropdown must go through the script lock)
+- Assuming a script write fires onEdit, data validation or conditional formatting: script and API writes do
+  neither, so a value that only a trigger would fix stays wrong
+- Sheets calls inside loops (getRange / getValue / setValue per cell or per row) that one batched read or
+  write would replace: the in-Sheet suite already hit Apps Script's 6-minute limit once and a killed
+  run left test data in the workbook
+- Top-level code in one .gs file that reads another file's globals (load order is not guaranteed), and
+  SpreadsheetApp calls above the "Sheet side" marker in a file whose pure half runs under Node
+- Shared mutable state across calls (module-level objects or arrays mutated in place, SUMMARY_STATE not
+  restored on a thrown error) and variable shadowing that hides which value is in scope
+- Tests that cannot fail: expectations built from the same code under test, JSON.stringify comparisons that
+  depend on object key order by accident, mock behaviour that differs from the real Sheet unnoticed
 
 Do not flag:
-- Missing docstrings or type annotations on exploratory/notebook code
-- Lack of input validation on internal helpers
-- Opportunities to abstract or DRY up code
-- Style issues (handled by linter)
+- Missing JSDoc, comment density, or naming taste
+- ES5 style (var, function expressions): the files are deliberately ES5 for Apps Script
+- Lack of input validation on internal helpers whose callers are in this repo
+- Opportunities to abstract or DRY up code, or file length
+- Hard-coded user-facing strings and sample data (exercise names, program templates)
+- Style issues
 """
 
 post_commit_batch_size = 5
