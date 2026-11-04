@@ -27,3 +27,5 @@ token.json
 
 # Generated output — sheet ID is environment-specific
 output/
+# roborev snapshots
+/.roborev/
