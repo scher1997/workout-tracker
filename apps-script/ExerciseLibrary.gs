@@ -92,6 +92,7 @@ function loadExerciseLibrary(opts) {
   if (map.getLastRow() > 1) map.getRange(2, 1, map.getLastRow() - 1, MAP_HEADERS.length).clearContent();
   map.getRange(2, 1, plan.rows.length, MAP_HEADERS.length).setValues(plan.rows);
   refreshSummarySafe(ss);   // scripted writes do not fire the Map edit hook
+  refreshMuscleList(ss, plan.rows);
   var done = 'Exercise Map: ' + plan.rows.length + ' exercises (' + plan.added + ' added, ' + plan.updated + ' updated, '
     + plan.kept + ' of yours kept after the library).';
   setStatus(ss, done);

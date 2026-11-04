@@ -100,6 +100,9 @@ function runSheetTests(part) {
       // 10b. Pass 12: exercise library, program template, a week with no Start Weight (ExerciseLibraryTests.gs)
       exerciseLibrarySheetTests(ss, check, helpers);
       lap('exercise library');
+      // 10c. Pass 13: Reset for a new user, the Start Here tab (ResetTests.gs)
+      resetSheetTests(ss, check, helpers);
+      lap('reset');
     }
     if (part !== 1) {
       // 11. Pass 7: Muscle Summary and Trends (MuscleSummaryTests.gs)

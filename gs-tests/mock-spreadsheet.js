@@ -270,8 +270,9 @@ function createMockEnv() {
   const logs = [];
   const menu = { addItem() { return menu; }, addSeparator() { return menu; }, addToUi() {} };
   const ui = {
-    ButtonSet: { YES_NO: 'YES_NO' },
-    Button: { YES: 'YES', NO: 'NO' },
+    ButtonSet: { YES_NO: 'YES_NO', OK_CANCEL: 'OK_CANCEL' },
+    Button: { YES: 'YES', NO: 'NO', OK: 'OK' },
+    prompt: title => { throw new Error('Unexpected ui.prompt in a non-interactive test: ' + title); },
     createMenu: () => menu,
     alert: title => { throw new Error('Unexpected ui.alert in a non-interactive test: ' + title); }
   };

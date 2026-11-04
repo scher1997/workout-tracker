@@ -35,6 +35,7 @@ nothing runs. Phone paths never show dialogs; where the menu would ask, they ref
 
 | Tab | What it is |
 |---|---|
+| **Start Here** | One-page guide for a new user (first-time setup, a training day, Complete Week, phone, adding exercises). Written once by Set up workbook so a copy carries it; Reset for a new user rewrites it. Text is built from `guideLines()` in `Guide.gs`. |
 | **Settings** | Actions (Current week, Status, Action dropdown), Program setup (Mesocycle name and length, Target RIR by week, default rep min/max), Preferences (Deload after last week, count secondary / tertiary muscles and their credit per set). Rows live in `SETTINGS_ROWS`; code only uses the names. |
 | **Program** | You edit this: Day, Exercise, Sets, Start Weight, Rep Min, Rep Max (blank rep cells use the Settings defaults). The source of truth for what a week contains. |
 | **Exercise Map** | Exercise to **Muscle Group** (primary), optional **Secondary** and **Tertiary** muscles (comma lists). No exercise or muscle names live in code: add a row, or a new muscle group, and everything follows. A new workbook starts with the built-in library (below). |
@@ -144,9 +145,26 @@ Flags. Notes and the raw S1-S5 reps stay out.
 - **No duplicates.** Typing an exercise that is already in the map (any case or spacing) is rejected. A paste or a script
   skips that rule, so a duplicate that gets in turns red and Status names it and its rows, on a Map edit and when Sessions are
   built. The first row is the one lookups use only by accident; delete or rename the other.
+- **Muscle spelling.** The Muscle Group column has a dropdown of the groups in use (a list the script keeps in column F of the
+  Exercise Map; warn-only, so a new group can still be typed). Secondary / Tertiary cells are free text. After a Map edit, a
+  muscle used by one exercise that is within two letters of a name used by three or more (Tricep vs Triceps, Quad vs Quads) is
+  named in Status as a likely typo. A real new group far from every existing name is never flagged.
 - **Partial credit for helper muscles:** tick **Count secondary muscles** / **Count tertiary muscles** in Settings > Preferences
   (credit per set 0.5 and 0.25 by default, editable). Then a bench set counts 1 for Chest, 0.5 for Triceps and 0.25 for Front Delts
   in the Muscle Summary, and its Total row sums credit, not sets done. Both are off until you tick them.
+
+## Handing the workbook to a tester
+
+1. **Make the clean master.** File > Make a copy of your workbook (the copy includes the script), open the copy, run
+   **Workout > Set up workbook**, then **Workout > Reset for a new user (copy only)** and type RESET. Reset erases Log, Archive
+   and Sessions, puts Exercise Map back to the library and Program to the first template, resets the week, mesocycle name,
+   length, RIR ladder and rep defaults, drops a leftover Test Backup tab and rewrites Start Here. **Settings > Preferences
+   stay**, so tick "Count secondary / tertiary muscles" first if testers should start with them on.
+2. **Share the master** so testers can use File > Make a copy (view access with copying allowed is enough).
+3. **Each tester** opens Start Here in their copy and follows the first-time steps. A copy carries the script but not its
+   trigger or permissions, so they run Set up workbook once and approve Google's authorization prompt (it says the app is
+   not verified because the script is not published). Until then the Action dropdown on the phone does nothing.
+4. Never run Reset on the workbook you train in.
 
 ## Setup and upgrading
 
@@ -156,7 +174,7 @@ clasp push --force        # first time: clasp login, then clasp create --type sh
 ```
 Then open the Sheet and run **Workout > Set up workbook** (authorize once). It is idempotent and never wipes data:
 creates missing tabs, headers, dropdowns, number-only validation (so the phone shows the number pad), protection, hiding of
-the four Sessions columns and the phone trigger; fills a new Exercise Map from the library and seeds an empty Program (first
+the four Sessions columns and the phone trigger; fills a new Exercise Map from the library and writes the Start Here guide once, seeds an empty Program (first
 program template, else an even split of the map); and migrates older
 layouts in place (single-list or tick-box Settings, the old *Session* tab name, the Log / Archive muscle columns).
 Run it after every push that changes layout. `.claspignore` pushes only `*.gs` and `appsscript.json`.
@@ -172,7 +190,7 @@ Run it after every push that changes layout. `.claspignore` pushes only `*.gs` a
 Node lives at `C:\Program Files\nodejs`. A new `.gs` file must be added to `gs-tests/gs-files.js`. The mock enforces data
 validation like Sheets does; it does not render charts, enforce protection, or fire onEdit triggers. The full in-Sheet suite
 is about 8,000 Sheets calls and passes Apps Script's 6-minute limit, so it runs in two halves (section times go to
-Extensions > Apps Script > Executions). At Pass 12: pure 336, in-Sheet 117 + 62 = 179, mock 194
+Extensions > Apps Script > Executions). At Pass 13: pure 351, in-Sheet 124 + 62 = 186, mock 201
 (the extra 15 are checks only the runner can do: setup, the action lock, recovery of a killed run).
 
 **The sheet tests overwrite Program, Sessions, Log, Archive, Exercise Map and Settings.** Before touching anything they save
@@ -199,7 +217,8 @@ with no backup: use it on a copy of the workbook only.
 | `MuscleSummary.gs` | Summary pivot, roles from the Exercise Map, `refreshSummarySafe()` |
 | `ExerciseLibraryUpper.gs`, `ExerciseLibraryLower.gs` | Data only: the exercise library rows (Exercise, Primary, Secondary, Tertiary) |
 | `ExerciseLibrary.gs` | `LIBRARY_MUSCLES`, `planLibraryMerge()` (pure), `loadExerciseLibrary()` |
-| `ExerciseMapGuard.gs` | `duplicateExercises()` (pure), `setupMapGuard()` (validation + red tint), `reportMapDuplicates()` |
+| `ExerciseMapGuard.gs` | `duplicateExercises()`, `muscleTypos()` (pure); `setupMapGuard()` (validation + red tint), `setupMuscleList()` / `refreshMuscleList()` (Muscle Group dropdown), `reportMapProblems()` |
+| `Guide.gs`, `Reset.gs` | The Start Here tab text and writer; `resetForNewUser()` (menu, copy only, asks for RESET) |
 | `ProgramTemplates.gs` | `PROGRAM_TEMPLATES` (superset-paired days), `loadProgramTemplate()` |
 | `Trends.gs` | Trends series (pure), chart, dropdown hook |
 | `SampleWeek.gs` | Sample-week loader (copy only); its data also drives the week-flow tests |

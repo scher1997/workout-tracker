@@ -4,6 +4,7 @@
  */
 
 var TABS = {
+  GUIDE: 'Start Here',
   SETTINGS: 'Settings',
   PROGRAM: 'Program',
   MAP: 'Exercise Map',
@@ -20,6 +21,10 @@ var MAP_HEADERS = ['Exercise', 'Muscle Group', 'Secondary Muscles', 'Tertiary Mu
 // Exercise Map rows 2..MAP_LAST_ROW are the lookup range (Program dropdown, duplicate guard). Add exercises below the last one.
 var MAP_LAST_ROW = 1000;
 var MAP_DUPLICATE_COLOR = '#f4c7c3';
+// Exercise Map column F lists every muscle group in use (script-written); it feeds the Muscle Group dropdown in column B.
+var MAP_MUSCLE_LIST = { col: 6, rows: 100, header: 'Muscle groups (auto)', width: 170 };
+// A muscle name used by this few exercises that is within `distance` edits of one used by `common`+ exercises is probably a typo.
+var MUSCLE_TYPO = { rareUses: 1, commonUses: 3, distance: 2, minLength: 4 };
 
 // 1-based column index of each Session column. Header order is derived from this.
 var SESSION_COLS = {

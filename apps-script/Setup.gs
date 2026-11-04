@@ -20,6 +20,7 @@ function onOpen() {
     .addSeparator()
     .addItem('Load sample week: full (copy only)', 'loadSampleWeekFull')
     .addItem('Load sample week: incomplete (copy only)', 'loadSampleWeekIncomplete')
+    .addItem('Reset for a new user (copy only)', 'resetForNewUser')
     .addSeparator()
     .addItem('Run tests', 'runAllTests')
     .addItem('Run sheet tests 1 of 2', 'runSheetTestsPart1')
@@ -40,6 +41,7 @@ function setupWorkbook() {
     if (!sh) ss.insertSheet(name);
   });
 
+  setupGuide(ss, false);   // the Start Here text is written once; Reset for a new user rewrites it
   setupSettings(ss, fresh[TABS.SETTINGS]);
   setupHeaderTab(ss, TABS.PROGRAM, PROGRAM_HEADERS);
   setupHeaderTab(ss, TABS.MAP, MAP_HEADERS);
@@ -61,6 +63,7 @@ function setupWorkbook() {
   seedProgramFromMap(ss);
   setupProgramValidation(ss);
   setupMapGuard(ss);   // no duplicate exercise names in the Exercise Map
+  setupMuscleList(ss);   // Muscle Group dropdown fed by the muscle list in column F
   setupSessionValidation(ss);
   setupSessionProtection(ss);
   installPhoneTrigger(ss);
@@ -70,7 +73,7 @@ function setupWorkbook() {
   // Drop the empty default sheet and put tabs in a sensible order.
   var blank = ss.getSheetByName('Sheet1');
   if (blank && blank.getLastRow() === 0 && ss.getSheets().length > 1) ss.deleteSheet(blank);
-  [TABS.SETTINGS, TABS.PROGRAM, TABS.SESSION, TABS.LOG, TABS.ARCHIVE, TABS.SUMMARY, TABS.TRENDS, TABS.MAP].forEach(function (n, i) {
+  [TABS.GUIDE, TABS.SETTINGS, TABS.PROGRAM, TABS.SESSION, TABS.LOG, TABS.ARCHIVE, TABS.SUMMARY, TABS.TRENDS, TABS.MAP].forEach(function (n, i) {
     ss.setActiveSheet(ss.getSheetByName(n));
     ss.moveActiveSheet(i + 1);
   });
@@ -218,8 +221,10 @@ function onSettingsEdit(e) {
   }
   if (sheetName === TABS.MAP) {
     var workbook = r.getSheet().getParent();
+    var mapRows = readMapBody(r.getSheet());
     refreshSummarySafe(workbook);   // new exercise or muscle group: summary follows, no code change
-    reportMapDuplicates(workbook);   // a pasted duplicate skips the validation rule: say so in Status
+    refreshMuscleList(workbook, mapRows);   // the Muscle Group dropdown follows
+    reportMapProblems(workbook, mapRows);   // a pasted duplicate skips the validation rule; a typo'd muscle makes a new group: say so in Status
     return;
   }
   if (sheetName === TABS.TRENDS) {

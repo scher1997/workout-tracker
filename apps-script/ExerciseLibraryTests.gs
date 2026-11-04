@@ -162,6 +162,16 @@ function exerciseLibrarySheetTests(ss, check, helpers) {
     onSettingsEdit({ range: map.getRange(after.length + 2, 1) });
     check('duplicate guard: a pasted duplicate is named in Status with its rows', statusOf().indexOf('Duplicate in Exercise Map: "Barbell Curl" (rows') > -1, true);
 
+    // Muscle spelling: Muscle Group has a warn-only dropdown fed by the list in column F; a typo'd muscle is named in Status
+    var dvMuscle = map.getRange(2, 2).getDataValidation();
+    check('muscle dropdown: column B offers the muscle list but still lets you type a new group',
+      [!!dvMuscle && String(dvMuscle.getCriteriaType()), !!dvMuscle && dvMuscle.getAllowInvalid(), map.getRange(1, MAP_MUSCLE_LIST.col).getValue(),
+        map.getRange(2, MAP_MUSCLE_LIST.col).getValue(), map.getRange(1 + LIBRARY_MUSCLES.upper.length + LIBRARY_MUSCLES.lower.length + LIBRARY_MUSCLES.spine.length, MAP_MUSCLE_LIST.col).getValue()],
+      ['VALUE_IN_RANGE', true, MAP_MUSCLE_LIST.header, 'Chest', 'Spinal Rotation']);
+    map.getRange(after.length + 2, 1, 1, MAP_HEADERS.length).setValues([['Typo Curl', 'Tricep', '', '']]);
+    onSettingsEdit({ range: map.getRange(after.length + 2, 1) });
+    check('muscle dropdown: a misspelled muscle is named in Status', statusOf().indexOf('"Tricep" looks like "Triceps"') > -1, true);
+
     clearBody(map, MAP_HEADERS.length);
     clearBody(program, PROGRAM_HEADERS.length);
     clearBody(session, SESSION_HEADERS.length);
