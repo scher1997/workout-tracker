@@ -15,6 +15,9 @@ function onOpen() {
     .addSeparator()
     .addItem('Refresh muscle summary + trends', 'refreshSummaryNow')
     .addSeparator()
+    .addItem('Load exercise library', 'loadExerciseLibrary')
+    .addItem('Load program: Upper/Lower 4-day', 'loadProgramUpperLower')
+    .addSeparator()
     .addItem('Load sample week: full (copy only)', 'loadSampleWeekFull')
     .addItem('Load sample week: incomplete (copy only)', 'loadSampleWeekIncomplete')
     .addSeparator()
@@ -52,7 +55,8 @@ function setupWorkbook() {
   setupTrends(ss);
 
   if (fresh[TABS.MAP]) {
-    ss.getSheetByName(TABS.MAP).getRange(2, 1, SEED_EXERCISE_MAP.length, 2).setValues(SEED_EXERCISE_MAP);
+    var library = exerciseLibrary();
+    ss.getSheetByName(TABS.MAP).getRange(2, 1, library.length, MAP_HEADERS.length).setValues(library);
   }
   seedProgramFromMap(ss);
   setupProgramValidation(ss);
@@ -107,13 +111,18 @@ function planSeedProgram(mapRows, days, sets) {
   });
 }
 
-/** Empty Program -> starter plan from the Exercise Map, so Build Session works straight away. Never touches existing rows. */
+/**
+ * Empty Program -> the first program template when the Exercise Map has all its exercises, else an even split of the map,
+ * so Build Session works straight away. Never touches existing rows.
+ */
 function seedProgramFromMap(ss) {
   var program = ss.getSheetByName(TABS.PROGRAM);
   var map = ss.getSheetByName(TABS.MAP);
   if (program.getLastRow() > 1) return;
   var mapRows = map.getLastRow() > 1 ? map.getRange(2, 1, map.getLastRow() - 1, 1).getValues() : [];
-  var rows = planSeedProgram(mapRows, SEED_PROGRAM.days, SEED_PROGRAM.sets);
+  var template = findProgramTemplate();
+  var fits = template && !templateMissingExercises(template, mapRows.map(function (r) { return r[0]; })).length;
+  var rows = fits ? templateProgramRows(template) : planSeedProgram(mapRows, SEED_PROGRAM.days, SEED_PROGRAM.sets);
   if (rows.length) program.getRange(2, 1, rows.length, PROGRAM_HEADERS.length).setValues(rows);
 }
 

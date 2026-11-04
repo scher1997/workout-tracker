@@ -37,7 +37,7 @@ nothing runs. Phone paths never show dialogs; where the menu would ask, they ref
 |---|---|
 | **Settings** | Actions (Current week, Status, Action dropdown), Program setup (Mesocycle name and length, Target RIR by week, default rep min/max), Preferences (Deload after last week, count secondary / tertiary muscles and their credit per set). Rows live in `SETTINGS_ROWS`; code only uses the names. |
 | **Program** | You edit this: Day, Exercise, Sets, Start Weight, Rep Min, Rep Max (blank rep cells use the Settings defaults). The source of truth for what a week contains. |
-| **Exercise Map** | Exercise to **Muscle Group** (primary), optional **Secondary** and **Tertiary** muscles (comma lists). No exercise or muscle names live in code: add a row, or a new muscle group, and everything follows. |
+| **Exercise Map** | Exercise to **Muscle Group** (primary), optional **Secondary** and **Tertiary** muscles (comma lists). No exercise or muscle names live in code: add a row, or a new muscle group, and everything follows. A new workbook starts with the built-in library (below). |
 | **Sessions** | The current week. Exercise is the one frozen column; Week, Day, Rep Range and Rep Target are hidden (still in the data; unhide from the column header, Set up workbook hides them again). Script-managed columns are warning-protected. |
 | **Log** | One row per logged exercise: Date, Week, Day, Exercise, Primary / Secondary / Tertiary muscle, then the Sessions columns. Secondary / tertiary are copied from the map when logged. |
 | **Archive** | Long-term, chart-ready view across mesocycles (below). |
@@ -109,6 +109,32 @@ Flags. Notes and the raw S1-S5 reps stay out.
   preferences or the Trends dropdowns. Manual: menu "Refresh muscle summary + trends" or the Action dropdown. A refresh
   error is logged and never blocks logging.
 
+## Exercise library and programs
+
+- **Workout > Load exercise library** puts about 225 hypertrophy exercises into the Exercise Map. Names are equipment first
+  (`Barbell`, `Dumbbell`, `Smith Machine Bulgarian Split Squat` are three different rows). No bodyweight-only movements; the GHD /
+  45-degree hyperextension / side-bend family is the deliberate exception. The data is in `ExerciseLibraryUpper.gs` and
+  `ExerciseLibraryLower.gs`.
+- **Muscle groups (20), in Muscle Summary order:** Chest, Lats, Upper Back, Traps, Front Delts, Side Delts, Rear Delts, Biceps,
+  Triceps, Forearms, Quads, Hamstrings, Glutes (hip abduction too), Adductors, Calves, Abs, then the spine groups **Spinal
+  Extension, Spinal Flexion, Spinal Side Bend, Spinal Rotation** (lower-back work, not hypertrophy volume). Hinges (RDL, deadlift,
+  good morning) credit Spinal Extension as a *secondary*. A pad-high GHD / 45-degree hyperextension is Spinal Extension primary;
+  `45-Degree Hyperextension (Glute Focus)` (pad low) is Glutes primary. Crunches are Abs with Spinal Flexion as secondary.
+- **The library wins on a merge.** Loading rewrites the Exercise Map as the library in library order, then your own exercises
+  (names not in the library) after it. A same-name row takes the library's muscles. Nothing is deleted; it asks first when the tab
+  already has rows, and a second load changes nothing. Muscle Summary lists every primary in map order first, then muscles that
+  are only ever secondary / tertiary, which keeps the spine groups at the bottom.
+- **Workout > Load program: Upper/Lower 4-day** replaces Program with a 4-day split (Mon Upper A, Tue Lower A, Thu Upper B, Fri
+  Lower B; 8 exercises a day) and builds Sessions for the current week. If the Map lacks any of its exercises, the library loads
+  first. Rows come in **superset pairs** (1+2, 3+4, ...): antagonists where one exists (chest/back, biceps/triceps,
+  quads/hamstrings, hip abduction/adduction, spinal extension/flexion), otherwise muscles that don't compete. There is no
+  Superset column; the order carries it. **Start Weight is blank**: type the weight you use in Actual Weight in week 1 and the
+  rules take it from there.
+- More programs: add an entry to `PROGRAM_TEMPLATES` in `ProgramTemplates.gs` (a test checks that every exercise exists in the
+  library and that upper days stay upper). A menu item per program is one line in `Setup.gs`. Both loaders are menu-only
+  (the iPhone does not run Apps Script menus); they are one-time desktop setup.
+- A brand-new workbook (new Exercise Map tab) is filled from the library, and an empty Program from the first template.
+
 ## Setup and upgrading
 
 ```
@@ -117,7 +143,8 @@ clasp push --force        # first time: clasp login, then clasp create --type sh
 ```
 Then open the Sheet and run **Workout > Set up workbook** (authorize once). It is idempotent and never wipes data:
 creates missing tabs, headers, dropdowns, number-only validation (so the phone shows the number pad), protection, hiding of
-the four Sessions columns and the phone trigger; seeds an empty Program from the Exercise Map; and migrates older
+the four Sessions columns and the phone trigger; fills a new Exercise Map from the library and seeds an empty Program (first
+program template, else an even split of the map); and migrates older
 layouts in place (single-list or tick-box Settings, the old *Session* tab name, the Log / Archive muscle columns).
 Run it after every push that changes layout. `.claspignore` pushes only `*.gs` and `appsscript.json`.
 
@@ -132,8 +159,8 @@ Run it after every push that changes layout. `.claspignore` pushes only `*.gs` a
 Node lives at `C:\Program Files\nodejs`. A new `.gs` file must be added to `gs-tests/gs-files.js`. The mock enforces data
 validation like Sheets does; it does not render charts, enforce protection, or fire onEdit triggers. The full in-Sheet suite
 is about 8,000 Sheets calls and passes Apps Script's 6-minute limit, so it runs in two halves (section times go to
-Extensions > Apps Script > Executions). At Pass 11: pure 301, in-Sheet 107 + 62 = 169, mock 184 (the extra 15 are checks only
-the runner can do: setup, the action lock, recovery of a killed run).
+Extensions > Apps Script > Executions). At Pass 12: pure 330, in-Sheet 114 + 62 = 176, mock 191
+(the extra 15 are checks only the runner can do: setup, the action lock, recovery of a killed run).
 
 **The sheet tests overwrite Program, Sessions, Log, Archive, Exercise Map and Settings.** Before touching anything they save
 a backup to a hidden **Test Backup** tab; a normal run restores from memory and deletes the tab, and the next run restores
@@ -157,6 +184,9 @@ with no backup: use it on a copy of the workbook only.
 | `Deload.gs` | Stall detection, deload plan, working-week numbering, `makeDeloadWeek()` |
 | `Archive.gs` | Archive transform, start weights, `startNewMesocycle()` |
 | `MuscleSummary.gs` | Summary pivot, roles from the Exercise Map, `refreshSummarySafe()` |
+| `ExerciseLibraryUpper.gs`, `ExerciseLibraryLower.gs` | Data only: the exercise library rows (Exercise, Primary, Secondary, Tertiary) |
+| `ExerciseLibrary.gs` | `LIBRARY_MUSCLES`, `planLibraryMerge()` (pure), `loadExerciseLibrary()` |
+| `ProgramTemplates.gs` | `PROGRAM_TEMPLATES` (superset-paired days), `loadProgramTemplate()` |
 | `Trends.gs` | Trends series (pure), chart, dropdown hook |
 | `SampleWeek.gs` | Sample-week loader (copy only); its data also drives the week-flow tests |
 | `*Tests.gs`, `SheetBaseTests.gs`, `TestBackup.gs`, `Tests.gs` | Tests per area; `Tests.gs` collects the pure ones; `TestBackup.gs` protects your data during sheet tests |

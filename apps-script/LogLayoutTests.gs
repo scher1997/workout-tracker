@@ -88,17 +88,17 @@ function runLogLayoutTests() {
   // Primary only: Chest 4, Quads 3, Biceps 3, the rest 0; total 10
   var p0 = planMuscleSummary(facts, LAYOUT_TEST_MAP, primaryOnly);
   check('primary only: Chest 4, Quads 3, Biceps 3, supporting muscles 0',
-    byName(p0), { Chest: [4], Triceps: [0], 'Front Delts': [0], Quads: [3], Glutes: [0], Hamstrings: [0], Biceps: [3] });
+    byName(p0), { Chest: [4], Quads: [3], Biceps: [3], Triceps: [0], 'Front Delts': [0], Glutes: [0], Hamstrings: [0] });
   check('primary only: total 10', p0.grid.slice(-1)[0], ['Total', 10]);
   // Full credit (every listed muscle = 1 set): bench 4 -> Chest, Triceps, Front Delts; squat 3 -> Quads, Glutes, Hamstrings; curl 3 -> Biceps
   var p1 = planMuscleSummary(facts, LAYOUT_TEST_MAP, fullCredit);
   check('full credit: bench is 4 sets for chest AND triceps AND front delts, squat 3 for all three',
-    byName(p1), { Chest: [4], Triceps: [4], 'Front Delts': [4], Quads: [3], Glutes: [3], Hamstrings: [3], Biceps: [3] });
+    byName(p1), { Chest: [4], Quads: [3], Biceps: [3], Triceps: [4], 'Front Delts': [4], Glutes: [3], Hamstrings: [3] });
   check('full credit: curl counts biceps only; total 4+4+4+3+3+3+3 = 24', p1.grid.slice(-1)[0], ['Total', 24]);
   // Partial (secondary 0.5, tertiary 0.25): Triceps 4x0.5 = 2, Front Delts 2, Glutes 3x0.5 = 1.5, Hamstrings 3x0.25 = 0.75
   var p2 = planMuscleSummary(facts, LAYOUT_TEST_MAP, partial);
   check('partial: bench 1 / 0.5 / 0.5, squat 1 / 0.5 / 0.25, curl biceps only',
-    byName(p2), { Chest: [4], Triceps: [2], 'Front Delts': [2], Quads: [3], Glutes: [1.5], Hamstrings: [0.75], Biceps: [3] });
+    byName(p2), { Chest: [4], Quads: [3], Biceps: [3], Triceps: [2], 'Front Delts': [2], Glutes: [1.5], Hamstrings: [0.75] });
   check('partial: total 4+2+2+3+1.5+0.75+3 = 16.25', p2.grid.slice(-1)[0], ['Total', 16.25]);
   // Exercise no longer in the map: the Secondary / Tertiary stored on its Log row still count
   var gone = planMuscleSummary(facts, [], partial);

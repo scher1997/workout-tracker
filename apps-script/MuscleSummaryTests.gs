@@ -42,8 +42,8 @@ function runMuscleSummaryTests() {
   // Parsing the map
   check('muscle list splits commas / semicolons, trims, drops blanks', parseMuscleList(' Triceps ,Front  delts;; lats , '), ['Triceps', 'Front delts', 'lats']);
   var built = buildMuscleRoles(map);
-  check('muscle groups = union of all three columns, in map order',
-    built.muscles, ['Zorceps', 'Forezorks', 'Wibbles', 'Shoulderz', 'Plonks']);
+  check('muscle groups = union of all three columns: primaries in map order, then secondary / tertiary-only muscles',
+    built.muscles, ['Zorceps', 'Wibbles', 'Plonks', 'Forezorks', 'Shoulderz']);
   check('rows without exercise or primary are ignored', Object.keys(built.roles), ['zork curl', 'wibble press', 'plonk row']);
   check('roles parsed', built.roles['plonk row'], { primary: 'Plonks', secondary: ['Zorceps', 'Wibbles'], tertiary: [] });
 
@@ -57,17 +57,17 @@ function runMuscleSummaryTests() {
   var f1 = facts(week1);
   var p0 = planMuscleSummary(f1, map, none);
   check('hand count, primary only: Zorceps 3+2, Wibbles 4, Plonks 2, others 0',
-    byName(p0), { Zorceps: [5], Forezorks: [0], Wibbles: [4], Shoulderz: [0], Plonks: [2] });
+    byName(p0), { Zorceps: [5], Wibbles: [4], Plonks: [2], Forezorks: [0], Shoulderz: [0] });
   check('total row = 11 sets', p0.grid[p0.grid.length - 1], ['Total', 11]);
   check('header row and mesocycle row', [p0.grid[0], p0.grid[1]], [['Muscle Group', 1], ['Mesocycle', 'Meso 1']]);
   check('grid is rectangular', p0.grid.every(function (r) { return r.length === 2; }), true);
 
   // Secondary / tertiary: curl 5 sets, press 4 sets, row 2 sets
   check('secondary on (x0.5): Zorceps 5+2+1, Forezorks 2.5, Wibbles 4+1',
-    byName(planMuscleSummary(f1, map, sec)), { Zorceps: [8], Forezorks: [2.5], Wibbles: [5], Shoulderz: [0], Plonks: [2] });
+    byName(planMuscleSummary(f1, map, sec)), { Zorceps: [8], Wibbles: [5], Plonks: [2], Forezorks: [2.5], Shoulderz: [0] });
   check('secondary total 17.5', planMuscleSummary(f1, map, sec).grid.slice(-1)[0], ['Total', 17.5]);
   check('tertiary only (x0.25): Shoulderz 4 x 0.25 = 1, secondary ignored',
-    byName(planMuscleSummary(f1, map, ter)), { Zorceps: [5], Forezorks: [0], Wibbles: [4], Shoulderz: [1], Plonks: [2] });
+    byName(planMuscleSummary(f1, map, ter)), { Zorceps: [5], Wibbles: [4], Plonks: [2], Forezorks: [0], Shoulderz: [1] });
   check('both on: total 18.5', planMuscleSummary(f1, map, both).grid.slice(-1)[0], ['Total', 18.5]);
   check('weights are editable: secondary x1',
     byName(planMuscleSummary(f1, map, { includeSecondary: true, secondaryWeight: 1 })).Forezorks, [5]);

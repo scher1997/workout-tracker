@@ -97,6 +97,9 @@ function runSheetTests(part) {
       // 10. Pass 6: Archive and Start New Mesocycle (ArchiveTests.gs)
       archiveSheetTests(ss, check, helpers);
       lap('archive');
+      // 10b. Pass 12: exercise library, program template, a week with no Start Weight (ExerciseLibraryTests.gs)
+      exerciseLibrarySheetTests(ss, check, helpers);
+      lap('exercise library');
     }
     if (part !== 1) {
       // 11. Pass 7: Muscle Summary and Trends (MuscleSummaryTests.gs)

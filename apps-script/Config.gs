@@ -196,21 +196,8 @@ var TRENDS_LAYOUT = {
   DATA_COL: 10, ITEMS_COL: 13
 };
 
-// Starter Program written by Set up workbook only when Program has no exercises: the Exercise Map rows, in map order,
-// split evenly across these days. Start Weight and rep range stay blank (Settings defaults apply). Edit the Program tab, not this.
+// Fallback Program written by Set up workbook when Program has no exercises and the Exercise Map lacks the first program
+// template's exercises (ProgramTemplates.gs): the Exercise Map rows, in map order, split evenly across these days.
+// Start Weight and rep range stay blank (Settings defaults apply). Edit the Program tab, not this.
+// A brand-new Exercise Map tab is filled from the exercise library (ExerciseLibrary.gs); edit the tab, not the library.
 var SEED_PROGRAM = { days: ['Mon', 'Wed', 'Fri'], sets: 3 };
-
-// Starter rows written to a brand-new Exercise Map tab only. Edit the tab, not this.
-var SEED_EXERCISE_MAP = [
-  ['Barbell Bench Press', 'Chest'],
-  ['Incline Dumbbell Press', 'Chest'],
-  ['Lat Pulldown', 'Back'],
-  ['Seated Cable Row', 'Back'],
-  ['Barbell Squat', 'Quads'],
-  ['Romanian Deadlift', 'Hamstrings'],
-  ['Overhead Press', 'Shoulders'],
-  ['Lateral Raise', 'Shoulders'],
-  ['Dumbbell Curl', 'Biceps'],
-  ['Triceps Pushdown', 'Triceps'],
-  ['Standing Calf Raise', 'Calves']
-];

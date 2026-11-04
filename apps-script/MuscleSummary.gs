@@ -12,11 +12,13 @@ function parseMuscleList(value) {
 
 /**
  * Exercise Map rows [[exercise, primary, secondary, tertiary]] ->
- * {roles: {normalizedExercise: {primary, secondary: [], tertiary: []}}, muscles: [display names in map order]}.
+ * {roles: {normalizedExercise: {primary, secondary: [], tertiary: []}}, muscles: [display names]}.
+ * muscles = every primary in map order, then the muscles that only ever appear as secondary / tertiary (so a helper
+ * muscle used early in the map cannot jump ahead of a primary that comes later).
  * Rows without an exercise or a primary muscle are ignored (same rule as buildMuscleLookup).
  */
 function buildMuscleRoles(mapRows) {
-  var roles = {}, muscles = [], seen = {};
+  var roles = {}, muscles = [], seen = {}, helpers = [];
   var note = function (m) {
     var k = normalizeName(m);
     if (k && !seen[k]) { seen[k] = true; muscles.push(cleanName(m)); }
@@ -27,9 +29,9 @@ function buildMuscleRoles(mapRows) {
     if (!key || !primary) return;
     roles[key] = { primary: primary, secondary: parseMuscleList(r[2]), tertiary: parseMuscleList(r[3]) };
     note(primary);
-    roles[key].secondary.forEach(note);
-    roles[key].tertiary.forEach(note);
+    helpers = helpers.concat(roles[key].secondary, roles[key].tertiary);
   });
+  helpers.forEach(note);
   return { roles: roles, muscles: muscles };
 }
 
