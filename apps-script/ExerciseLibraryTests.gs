@@ -29,6 +29,8 @@ function runExerciseLibraryTests() {
       var all = [cleanName(r[1])].concat(parseMuscleList(r[2]), parseMuscleList(r[3]));
       return all.some(function (m, i) { return all.indexOf(m) !== i; });
     }).map(function (r) { return r[0]; }), []);
+  check('library: at most one Secondary muscle per row (the rest are Tertiary)',
+    lib.filter(function (r) { return parseMuscleList(r[2]).length > 1; }).map(function (r) { return r[0]; }), []);
   var counts = {};
   lib.forEach(function (r) { counts[r[1]] = (counts[r[1]] || 0) + 1; });
   check('library: every muscle group has at least 3 exercises', allMuscles.filter(function (m) { return !(counts[m] >= 3); }), []);

@@ -8,16 +8,16 @@
  */
 var EXERCISE_LIBRARY_LOWER = [
   // Quads
-  ['Back Squat', 'Quads', 'Glutes, Adductors', 'Spinal Extension'],
+  ['Back Squat', 'Quads', 'Glutes', 'Adductors, Spinal Extension'],
   ['Front Squat', 'Quads', 'Glutes', 'Spinal Extension'],
   ['Smith Machine Squat', 'Quads', 'Glutes', 'Adductors'],
   ['Hack Squat', 'Quads', 'Glutes', 'Adductors'],
   ['Pendulum Squat', 'Quads', 'Glutes', ''],
-  ['Belt Squat', 'Quads', 'Glutes, Adductors', ''],
+  ['Belt Squat', 'Quads', 'Glutes', 'Adductors'],
   ['Dumbbell Goblet Squat', 'Quads', 'Glutes', ''],
-  ['Leg Press', 'Quads', 'Glutes, Adductors', ''],
+  ['Leg Press', 'Quads', 'Glutes', 'Adductors'],
   ['Narrow-Stance Leg Press', 'Quads', 'Glutes', ''],
-  ['Wide-Stance Leg Press', 'Quads', 'Glutes, Adductors', ''],
+  ['Wide-Stance Leg Press', 'Quads', 'Glutes', 'Adductors'],
   ['Single-Leg Leg Press', 'Quads', 'Glutes', 'Adductors'],
   ['Leg Extension', 'Quads', '', ''],
   ['Single-Leg Leg Extension', 'Quads', '', ''],
@@ -35,14 +35,14 @@ var EXERCISE_LIBRARY_LOWER = [
   ['Barbell Step-Up', 'Quads', 'Glutes', ''],
 
   // Hamstrings
-  ['Romanian Deadlift', 'Hamstrings', 'Glutes, Spinal Extension', 'Forearms'],
-  ['Dumbbell Romanian Deadlift', 'Hamstrings', 'Glutes, Spinal Extension', 'Forearms'],
-  ['Smith Machine Romanian Deadlift', 'Hamstrings', 'Glutes, Spinal Extension', ''],
-  ['Trap-Bar Romanian Deadlift', 'Hamstrings', 'Glutes, Spinal Extension', 'Forearms'],
-  ['Single-Leg Dumbbell Romanian Deadlift', 'Hamstrings', 'Glutes, Spinal Extension', 'Adductors'],
-  ['Stiff-Leg Deadlift', 'Hamstrings', 'Glutes, Spinal Extension', 'Forearms'],
-  ['Conventional Deadlift', 'Hamstrings', 'Glutes, Spinal Extension', 'Quads, Traps'],
-  ['Barbell Good Morning', 'Hamstrings', 'Glutes, Spinal Extension', ''],
+  ['Romanian Deadlift', 'Hamstrings', 'Spinal Extension', 'Glutes, Forearms'],
+  ['Dumbbell Romanian Deadlift', 'Hamstrings', 'Spinal Extension', 'Glutes, Forearms'],
+  ['Smith Machine Romanian Deadlift', 'Hamstrings', 'Spinal Extension', 'Glutes'],
+  ['Trap-Bar Romanian Deadlift', 'Hamstrings', 'Spinal Extension', 'Glutes, Forearms'],
+  ['Single-Leg Dumbbell Romanian Deadlift', 'Hamstrings', 'Spinal Extension', 'Glutes, Adductors'],
+  ['Stiff-Leg Deadlift', 'Hamstrings', 'Spinal Extension', 'Glutes, Forearms'],
+  ['Conventional Deadlift', 'Hamstrings', 'Spinal Extension', 'Glutes, Quads, Traps'],
+  ['Barbell Good Morning', 'Hamstrings', 'Spinal Extension', 'Glutes'],
   ['Seated Leg Curl', 'Hamstrings', '', 'Calves'],
   ['Lying Leg Curl', 'Hamstrings', '', 'Calves'],
   ['Single-Leg Seated Leg Curl', 'Hamstrings', '', 'Calves'],
@@ -66,8 +66,8 @@ var EXERCISE_LIBRARY_LOWER = [
   ['Reverse Hyperextension', 'Glutes', 'Hamstrings', 'Spinal Extension'],
   ['Hip Abduction Machine', 'Glutes', '', ''],
   ['Cable Hip Abduction', 'Glutes', '', ''],
-  ['Sumo Deadlift', 'Glutes', 'Adductors, Spinal Extension', 'Quads, Hamstrings'],
-  ['Dumbbell Curtsy Lunge', 'Glutes', 'Quads, Adductors', ''],
+  ['Sumo Deadlift', 'Glutes', 'Spinal Extension', 'Adductors, Quads, Hamstrings'],
+  ['Dumbbell Curtsy Lunge', 'Glutes', 'Quads', 'Adductors'],
   ['High-Box Dumbbell Step-Up', 'Glutes', 'Quads', ''],
 
   // Adductors
@@ -115,8 +115,8 @@ var EXERCISE_LIBRARY_LOWER = [
   ['Weighted 45-Degree Hyperextension Side Bend', 'Spinal Side Bend', 'Abs', 'Glutes'],
   ['Dumbbell Side Bend', 'Spinal Side Bend', 'Abs', 'Forearms'],
   ['Cable Side Bend', 'Spinal Side Bend', 'Abs', ''],
-  ['Farmer\'s Carry', 'Spinal Side Bend', 'Forearms, Traps', 'Abs, Glutes'],
-  ['Suitcase Carry', 'Spinal Side Bend', 'Forearms, Abs', 'Traps, Glutes'],
+  ['Farmer\'s Carry', 'Spinal Side Bend', 'Forearms', 'Traps, Abs, Glutes'],
+  ['Suitcase Carry', 'Spinal Side Bend', 'Forearms', 'Abs, Traps, Glutes'],
 
   // Spinal Rotation (Pallof presses resist rotation)
   ['Cable Trunk Rotation', 'Spinal Rotation', 'Abs', ''],

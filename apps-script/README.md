@@ -120,6 +120,8 @@ Flags. Notes and the raw S1-S5 reps stay out.
   Extension, Spinal Flexion, Spinal Side Bend, Spinal Rotation** (lower-back work, not hypertrophy volume). Hinges (RDL, deadlift,
   good morning) credit Spinal Extension as a *secondary*. A pad-high GHD / 45-degree hyperextension is Spinal Extension primary;
   `45-Degree Hyperextension (Glute Focus)` (pad low) is Glutes primary. Crunches are Abs with Spinal Flexion as secondary.
+- **One Secondary, the rest Tertiary.** Each library row names one Secondary muscle; further helpers go in Tertiary (bench:
+  Triceps secondary, Front Delts tertiary). Hinges keep Spinal Extension as the Secondary, with Glutes in Tertiary.
 - **The library wins on a merge.** Loading rewrites the Exercise Map as the library in library order, then your own exercises
   (names not in the library) after it. A same-name row takes the library's muscles. Nothing is deleted; it asks first when the tab
   already has rows, and a second load changes nothing. Muscle Summary lists every primary in map order first, then muscles that
