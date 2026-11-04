@@ -19,7 +19,7 @@ function runResetTests() {
     [SETTINGS_ACTIONS.WEEK, SETTINGS_ACTIONS.BUILD, SETTINGS_ACTIONS.CLEAR, SETTINGS_ACTIONS.DELOAD, SETTINGS_ACTIONS.SUMMARY, SETTINGS_ACTIONS.NEW_MESO]
       .filter(function (a) { return text.indexOf(a) === -1; }), []);
   check('guide: names the two counting settings and the first program',
-    [SETTINGS_LABELS.INCL_SECONDARY, SETTINGS_LABELS.INCL_TERTIARY, SETTINGS_LABELS.WEEK, 'Set up workbook', 'Load program: ' + PROGRAM_TEMPLATES[0].name]
+    [SETTINGS_LABELS.INCL_SECONDARY, SETTINGS_LABELS.INCL_TERTIARY, SETTINGS_LABELS.SECONDARY_WEIGHT, SETTINGS_LABELS.TERTIARY_WEIGHT, SETTINGS_LABELS.WEEK, 'Set up workbook', 'Load program: ' + PROGRAM_TEMPLATES[0].name]
       .filter(function (s) { return text.indexOf(s) === -1; }), []);
   check('guide: mentions every tab a new user touches', [TABS.SESSION, TABS.PROGRAM, TABS.MAP, TABS.SETTINGS].filter(function (t) { return text.indexOf(t) === -1; }), []);
 

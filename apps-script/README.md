@@ -151,7 +151,7 @@ Flags. Notes and the raw S1-S5 reps stay out.
   named in Status as a likely typo. A real new group far from every existing name is never flagged.
 - **Partial credit for helper muscles:** tick **Count secondary muscles** / **Count tertiary muscles** in Settings > Preferences
   (credit per set 0.5 and 0.25 by default, editable). Then a bench set counts 1 for Chest, 0.5 for Triceps and 0.25 for Front Delts
-  in the Muscle Summary, and its Total row sums credit, not sets done. Both are off until you tick them.
+  in the Muscle Summary, and its Total row sums credit, not sets done. Both are ticked by default in a new workbook (an existing choice is never changed; untick them to count main muscles only).
 
 ## Handing the workbook to a tester
 
@@ -159,7 +159,7 @@ Flags. Notes and the raw S1-S5 reps stay out.
    **Workout > Set up workbook**, then **Workout > Reset for a new user (copy only)** and type RESET. Reset erases Log, Archive
    and Sessions, puts Exercise Map back to the library and Program to the first template, resets the week, mesocycle name,
    length, RIR ladder and rep defaults, drops a leftover Test Backup tab and rewrites Start Here. **Settings > Preferences
-   stay**, so tick "Count secondary / tertiary muscles" first if testers should start with them on.
+   stay** (the counting options are ticked by default; set them how testers should start).
 2. **Share the master** so testers can use File > Make a copy (view access with copying allowed is enough).
 3. **Each tester** opens Start Here in their copy and follows the first-time steps. A copy carries the script but not its
    trigger or permissions, so they run Set up workbook once and approve Google's authorization prompt (it says the app is
@@ -190,8 +190,8 @@ Run it after every push that changes layout. `.claspignore` pushes only `*.gs` a
 Node lives at `C:\Program Files\nodejs`. A new `.gs` file must be added to `gs-tests/gs-files.js`. The mock enforces data
 validation like Sheets does; it does not render charts, enforce protection, or fire onEdit triggers. The full in-Sheet suite
 is about 8,000 Sheets calls and passes Apps Script's 6-minute limit, so it runs in two halves (section times go to
-Extensions > Apps Script > Executions). At Pass 13: pure 351, in-Sheet 124 + 62 = 186, mock 201
-(the extra 15 are checks only the runner can do: setup, the action lock, recovery of a killed run).
+Extensions > Apps Script > Executions). At Pass 13: pure 351, in-Sheet 124 + 62 = 186, mock 203
+(the extra 17 are checks only the runner can do: setup and its counting defaults, the action lock, recovery of a killed run).
 
 **The sheet tests overwrite Program, Sessions, Log, Archive, Exercise Map and Settings.** Before touching anything they save
 a backup to a hidden **Test Backup** tab; a normal run restores from memory and deletes the tab, and the next run restores

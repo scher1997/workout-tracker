@@ -25,6 +25,13 @@ check('setup: all tabs created', tabsAfterFirst.length, run('Object.keys(TABS).l
 check('setup: second run keeps the same tabs in order', env.ss.getSheets().map(s => s.getName()), tabsAfterFirst);
 check('setup: exactly one onSettingsEdit trigger', env.triggers.filter(t => t.getHandlerFunction() === 'onSettingsEdit').length, 1);
 check('setup: Program seeded from the map', env.ss.getSheetByName('Program').getRange(2, 2).getValue() !== '', true);
+// Helper muscles earn partial credit by default: a new Settings tab starts ticked, and a later setup never undoes an explicit choice.
+const prefCell = key => env.ss.getSheetByName('Settings').getRange(run('SETTINGS_ROWS.' + key), 2);
+check('setup: secondary and tertiary counting start ticked', [prefCell('INCL_SECONDARY').getValue(), prefCell('INCL_TERTIARY').getValue()], [true, true]);
+prefCell('INCL_TERTIARY').setValue(false);
+run('setupWorkbook()');
+check('setup: an unticked option stays unticked after another setup', [prefCell('INCL_SECONDARY').getValue(), prefCell('INCL_TERTIARY').getValue()], [true, false]);
+prefCell('INCL_TERTIARY').setValue(true);
 
 // A run killed by the 6-minute limit leaves its backup in the hidden "Test Backup" tab and the tests' data in the workbook.
 // Simulate that here (runner-only: the real Sheet cannot be killed on purpose); the run below must put the user's data back.

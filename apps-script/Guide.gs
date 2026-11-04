@@ -17,8 +17,9 @@ function guideLines() {
     ['1. Open the Workout menu > Set up workbook. Google asks you to authorize the script once. It may warn that the app is not verified: '
       + 'that is because the script is not published, so continue only if you got this workbook from the person who made it.', 'p'],
     ['2. Workout > Load program: ' + program + ' for a ready training split, or build your own on the Program tab.', 'p'],
-    ['3. On Settings, check "' + L.WEEK + '" is 1 and give the mesocycle a name. Tick "' + L.INCL_SECONDARY + '" and "' + L.INCL_TERTIARY
-      + '" if you want helper muscles to earn partial credit in the Muscle Summary.', 'p'],
+    ['3. On Settings, check "' + L.WEEK + '" is 1 and give the mesocycle a name. "' + L.INCL_SECONDARY + '" and "' + L.INCL_TERTIARY
+      + '" are ticked, so helper muscles earn partial credit in the Muscle Summary (a bench press set counts fully for Chest and partly for Triceps and Front Delts; '
+      + 'the share is "' + L.SECONDARY_WEIGHT + '" and "' + L.TERTIARY_WEIGHT + '"). Untick them to count only the main muscle.', 'p'],
     ['Each training day', 'h'],
     ['1. Open the Sessions tab. Rows are grouped and tinted by day. The gray numbers are the plan: sets, Actual RIR and Actual Weight come prefilled.', 'p'],
     ['2. Type over only what differed: the reps you really did, the weight you really used (Actual Weight) and how many reps you had left (Actual RIR). '

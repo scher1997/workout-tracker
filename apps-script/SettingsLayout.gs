@@ -66,8 +66,14 @@ function setupSettings(ss, isNew) {
   var atEndWas = atEnd.getValue();
   atEnd.insertCheckboxes();
   if (atEndWas === '') atEnd.setValue(true);   // on by default
-  sh.getRange(SETTINGS_ROWS.INCL_SECONDARY, 2).insertCheckboxes();
-  sh.getRange(SETTINGS_ROWS.INCL_TERTIARY, 2).insertCheckboxes();
+  // Helper muscles earn partial credit by default (a big compound counts for the muscles it works). A blank cell becomes ticked;
+  // an explicit choice, ticked or not, is never touched.
+  ['INCL_SECONDARY', 'INCL_TERTIARY'].forEach(function (k) {
+    var cell = sh.getRange(SETTINGS_ROWS[k], 2);
+    var was = cell.getValue();
+    cell.insertCheckboxes();
+    if (was === '') cell.setValue(true);
+  });
   var secW = sh.getRange(SETTINGS_ROWS.SECONDARY_WEIGHT, 2);
   if (secW.getValue() === '') secW.setValue(SUMMARY.secondaryWeight);
   var terW = sh.getRange(SETTINGS_ROWS.TERTIARY_WEIGHT, 2);
