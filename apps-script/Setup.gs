@@ -60,6 +60,7 @@ function setupWorkbook() {
   }
   seedProgramFromMap(ss);
   setupProgramValidation(ss);
+  setupMapGuard(ss);   // no duplicate exercise names in the Exercise Map
   setupSessionValidation(ss);
   setupSessionProtection(ss);
   installPhoneTrigger(ss);
@@ -131,7 +132,7 @@ function setupProgramValidation(ss) {
   var map = ss.getSheetByName(TABS.MAP);
   // Warn-only so a pasted old plan with unknown names still lands.
   var rule = SpreadsheetApp.newDataValidation()
-    .requireValueInRange(map.getRange('A2:A1000'), true).setAllowInvalid(true).build();
+    .requireValueInRange(map.getRange('A2:A' + MAP_LAST_ROW), true).setAllowInvalid(true).build();
   program.getRange('B2:B1000').setDataValidation(rule);
   // Numeric Program columns: Sets, Start Weight, Rep Min, Rep Max (number pad on the phone).
   program.getRange('C2:C1000').setDataValidation(numberRule(1, 20));
@@ -216,7 +217,9 @@ function onSettingsEdit(e) {
     return;
   }
   if (sheetName === TABS.MAP) {
-    refreshSummarySafe(r.getSheet().getParent());   // new exercise or muscle group: summary follows, no code change
+    var workbook = r.getSheet().getParent();
+    refreshSummarySafe(workbook);   // new exercise or muscle group: summary follows, no code change
+    reportMapDuplicates(workbook);   // a pasted duplicate skips the validation rule: say so in Status
     return;
   }
   if (sheetName === TABS.TRENDS) {

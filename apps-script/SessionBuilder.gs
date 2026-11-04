@@ -254,6 +254,8 @@ function buildSession(opts) {
     + plan.rir + '.'];
   if (plan.unknown.length) notes.push('Not in Exercise Map: ' + plan.unknown.join(', ') + '.');
   if (plan.duplicates.length) notes.push('Duplicates: ' + plan.duplicates.join(', ') + '.');
+  var mapDuplicates = duplicateExercises(mapRows);
+  if (mapDuplicates.length) notes.push(duplicateWarning(mapDuplicates));
   notes = notes.concat(plan.warnings);
   setStatus(ss, notes.join(' '));
   ss.toast(notes[0], 'Workout Tracker', 5);

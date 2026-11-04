@@ -52,6 +52,19 @@ function runExerciseLibraryTests() {
   check('library: rotation and side bend examples', [roleOf('Cable Trunk Rotation').primary, roleOf('GHD Side Bend').primary, roleOf('Farmer\'s Carry').primary],
     ['Spinal Rotation', 'Spinal Side Bend', 'Spinal Side Bend']);
 
+  // Duplicate guard (ExerciseMapGuard.gs)
+  var dupMap = [['Zork Press'], [''], ['zork  PRESS'], ['Wibble Row'], ['Zork Press'], ['Wibble Curl']];
+  check('duplicates: case and spacing ignored, blanks skipped, sheet row numbers (header is row 1)',
+    duplicateExercises(dupMap), [{ name: 'Zork Press', rows: [2, 4, 6] }]);
+  check('duplicates: none in a clean list, and none in the library', [duplicateExercises([['A'], ['B'], ['']]), duplicateExercises(lib)], [[], []]);
+  check('duplicates: the Status line names the exercise and its rows',
+    [duplicateWarning(duplicateExercises(dupMap)), duplicateWarning([])],
+    ['Duplicate in Exercise Map: "Zork Press" (rows 2, 4, 6). Delete or rename one.', '']);
+  check('duplicates: a long list is cut to three names',
+    duplicateWarning(duplicateExercises([['a'], ['a'], ['b'], ['b'], ['c'], ['c'], ['d'], ['d'], ['e'], ['e']])).indexOf('and 2 more') > -1, true);
+  check('duplicates: the validation formula covers the whole lookup range and compares trimmed, lower-case names',
+    duplicateCountFormula('A2'), 'SUMPRODUCT(--(LOWER(TRIM($A$2:$A$' + MAP_LAST_ROW + '))=LOWER(TRIM(A2))))');
+
   // Merging into an Exercise Map (invented names)
   var small = [['Zork Press', 'Chest', 'Triceps', ''], ['Wibble Row', 'Lats', '', '']];
   var fresh = planLibraryMerge([], small);
@@ -137,6 +150,17 @@ function exerciseLibrarySheetTests(ss, check, helpers) {
     var after = helpers.rowsOf(map, MAP_HEADERS.length);
     check('library load: a changed muscle is updated, your own row is kept after the library',
       [merged.updated, merged.kept, merged.added, after[pec][1], after[after.length - 1][0]], [1, 1, 0, 'Chest', 'My Cable Thing']);
+
+    // Duplicate guard: the validation rule and red tint are on the whole lookup range; a pasted duplicate is named in Status
+    var dv = map.getRange(2, 1).getDataValidation(), dvLast = map.getRange(MAP_LAST_ROW, 1).getDataValidation();
+    var cf = map.getConditionalFormatRules();
+    check('duplicate guard: column A rejects a typed duplicate across rows 2 to ' + MAP_LAST_ROW,
+      [!!dv && String(dv.getCriteriaType()), !!dv && dv.getAllowInvalid(), !!dv && String(dv.getCriteriaValues()[0]).indexOf('SUMPRODUCT') > -1, !!dvLast],
+      ['CUSTOM_FORMULA', false, true, true]);
+    check('duplicate guard: one red-tint rule on column A', [cf.length, cf.length === 1 && String(cf[0].getBooleanCondition().getCriteriaType())], [1, 'CUSTOM_FORMULA']);
+    map.getRange(after.length + 2, 1, 1, MAP_HEADERS.length).setValues([['barbell  CURL', 'Biceps', '', '']]);   // a paste skips the rule
+    onSettingsEdit({ range: map.getRange(after.length + 2, 1) });
+    check('duplicate guard: a pasted duplicate is named in Status with its rows', statusOf().indexOf('Duplicate in Exercise Map: "Barbell Curl" (rows') > -1, true);
 
     clearBody(map, MAP_HEADERS.length);
     clearBody(program, PROGRAM_HEADERS.length);

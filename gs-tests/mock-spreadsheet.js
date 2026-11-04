@@ -66,6 +66,8 @@ class ValidationBuilder {
   requireValueInRange(range, show) { this.rule.type = 'VALUE_IN_RANGE'; this.rule.values = [range, show]; return this; }
   requireNumberBetween(min, max) { this.rule.type = 'NUMBER_BETWEEN'; this.rule.values = [min, max]; return this; }
   requireCheckbox() { this.rule.type = 'CHECKBOX'; this.rule.values = []; return this; }
+  // Stored, not evaluated (like conditional formats): the mock cannot run a Sheets formula, so passes() lets every value through.
+  requireFormulaSatisfied(formula) { this.rule.type = 'CUSTOM_FORMULA'; this.rule.values = [formula]; return this; }
   setAllowInvalid(a) { this.rule.allowInvalid = a; return this; }
   setHelpText(t) { this.rule.helpText = t; return this; }
   build() {
@@ -283,11 +285,12 @@ function createMockEnv() {
       const b = {
         whenFormulaSatisfied: f => { rule.formula = f; return b; },
         setFontColor: c => { rule.fontColor = c; return b; },
+        setBackground: c => { rule.background = c; return b; },
         setGradientMinpoint: () => b, setGradientMaxpoint: () => b,
         setRanges: r => { rule.ranges = r; return b; },
         build: () => ({
           getRanges: () => rule.ranges,
-          getBooleanCondition: () => rule.formula && { getCriteriaType: () => 'CUSTOM_FORMULA', getCriteriaValues: () => [rule.formula], getFontColor: () => rule.fontColor }
+          getBooleanCondition: () => rule.formula && { getCriteriaType: () => 'CUSTOM_FORMULA', getCriteriaValues: () => [rule.formula], getFontColor: () => rule.fontColor, getBackground: () => rule.background }
         })
       };
       return b;

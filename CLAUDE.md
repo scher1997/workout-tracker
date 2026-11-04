@@ -35,7 +35,7 @@ The old Python tracker was removed in Pass 11 (it is in git history before that 
 ## Mock fidelity
 - If the in-Sheet result differs from the mock, change the mock to reproduce it before
   fixing the code. Known gaps: no chart rendering, no protection enforcement, no onEdit
-  triggers, conditional formats are stored but not evaluated.
+  triggers, conditional formats and custom-formula data validation (the Exercise Map duplicate guard) are stored but not evaluated.
 
 ## Docs
 - `apps-script/README.md` was rewritten in Pass 11 and describes the current behaviour. Update the

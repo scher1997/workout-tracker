@@ -136,6 +136,17 @@ Flags. Notes and the raw S1-S5 reps stay out.
   library and that upper days stay upper). A menu item per program is one line in `Setup.gs`. Both loaders are menu-only
   (the iPhone does not run Apps Script menus); they are one-time desktop setup.
 - A brand-new workbook (new Exercise Map tab) is filled from the library, and an empty Program from the first template.
+- **Adding your own exercises:** type them in the next empty row of the Exercise Map (Exercise, Muscle Group, optional
+  Secondary / Tertiary). That is all: the Program Exercise dropdown reads rows 2 to 1000 of the map (`MAP_LAST_ROW`), Sessions and Log
+  look the muscles up by name, and the Muscle Summary and Trends refresh on the edit. A new muscle group works the same way:
+  just type it (spell it the same way each time, or you get two groups). Reloading the library later keeps your rows, after the
+  library.
+- **No duplicates.** Typing an exercise that is already in the map (any case or spacing) is rejected. A paste or a script
+  skips that rule, so a duplicate that gets in turns red and Status names it and its rows, on a Map edit and when Sessions are
+  built. The first row is the one lookups use only by accident; delete or rename the other.
+- **Partial credit for helper muscles:** tick **Count secondary muscles** / **Count tertiary muscles** in Settings > Preferences
+  (credit per set 0.5 and 0.25 by default, editable). Then a bench set counts 1 for Chest, 0.5 for Triceps and 0.25 for Front Delts
+  in the Muscle Summary, and its Total row sums credit, not sets done. Both are off until you tick them.
 
 ## Setup and upgrading
 
@@ -161,7 +172,7 @@ Run it after every push that changes layout. `.claspignore` pushes only `*.gs` a
 Node lives at `C:\Program Files\nodejs`. A new `.gs` file must be added to `gs-tests/gs-files.js`. The mock enforces data
 validation like Sheets does; it does not render charts, enforce protection, or fire onEdit triggers. The full in-Sheet suite
 is about 8,000 Sheets calls and passes Apps Script's 6-minute limit, so it runs in two halves (section times go to
-Extensions > Apps Script > Executions). At Pass 12: pure 330, in-Sheet 114 + 62 = 176, mock 191
+Extensions > Apps Script > Executions). At Pass 12: pure 336, in-Sheet 117 + 62 = 179, mock 194
 (the extra 15 are checks only the runner can do: setup, the action lock, recovery of a killed run).
 
 **The sheet tests overwrite Program, Sessions, Log, Archive, Exercise Map and Settings.** Before touching anything they save
@@ -188,6 +199,7 @@ with no backup: use it on a copy of the workbook only.
 | `MuscleSummary.gs` | Summary pivot, roles from the Exercise Map, `refreshSummarySafe()` |
 | `ExerciseLibraryUpper.gs`, `ExerciseLibraryLower.gs` | Data only: the exercise library rows (Exercise, Primary, Secondary, Tertiary) |
 | `ExerciseLibrary.gs` | `LIBRARY_MUSCLES`, `planLibraryMerge()` (pure), `loadExerciseLibrary()` |
+| `ExerciseMapGuard.gs` | `duplicateExercises()` (pure), `setupMapGuard()` (validation + red tint), `reportMapDuplicates()` |
 | `ProgramTemplates.gs` | `PROGRAM_TEMPLATES` (superset-paired days), `loadProgramTemplate()` |
 | `Trends.gs` | Trends series (pure), chart, dropdown hook |
 | `SampleWeek.gs` | Sample-week loader (copy only); its data also drives the week-flow tests |

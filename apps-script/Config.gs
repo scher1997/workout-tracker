@@ -17,6 +17,9 @@ var TABS = {
 var PROGRAM_HEADERS = ['Day', 'Exercise', 'Sets', 'Start Weight', 'Rep Min', 'Rep Max'];
 // Muscle Group = primary muscle. Secondary/Tertiary are optional comma lists (counted when Settings says so).
 var MAP_HEADERS = ['Exercise', 'Muscle Group', 'Secondary Muscles', 'Tertiary Muscles'];
+// Exercise Map rows 2..MAP_LAST_ROW are the lookup range (Program dropdown, duplicate guard). Add exercises below the last one.
+var MAP_LAST_ROW = 1000;
+var MAP_DUPLICATE_COLOR = '#f4c7c3';
 
 // 1-based column index of each Session column. Header order is derived from this.
 var SESSION_COLS = {
